@@ -30,10 +30,14 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 - localStorage: `taphoa_products`, `taphoa_cart`, `taphoa_last_backup`, `taphoa_backup_pw`, `taphoa_order_keep_days`,
   `taphoa_shop` (`{ name }`: chỉ tên tiệm; chủ tiệm không muốn có địa chỉ và số điện thoại).
   `taphoa_settings` (`{ askCustomer }`: bật ghi tên khách, mặc định tắt vì tạp hóa không cần, tiệm đồ dùng cần),
-  `taphoa_recent_customers` (tên khách gần đây).
-- IndexedDB `taphoa` phiên bản 2: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
-  kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm).
-- Đơn: `{ ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change, customer? }`.
+  `taphoa_recent_customers` (tên khách gần đây, giữ cách viết đầu tiên), `taphoa_cart_customer` (khách của đơn đang tính,
+  chọn trước khi chọn hàng).
+- IndexedDB `taphoa` phiên bản 3: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
+  kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm),
+  kho `debts` (keyPath `ts`, sổ nợ `{ ts, customer, type: 'no'|'tra', amount, orderTs? }`; nợ của khách = tổng `no` − tổng `tra`,
+  gộp theo `plain(tên)`). Sổ nợ KHÔNG bị xóa theo thời gian giữ lịch sử.
+- Đơn: `{ ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change, customer?, debt? }`
+  (`debt` = phần ghi nợ; xóa/mở lại đơn có `debt` thì xóa luôn dòng `no` có `orderTs` trùng, trong cùng một giao dịch).
 - Món: `{ id, name, price, unit?, units?: [{ name, price }], bulkMin?, bulkPrice? }`
   (`price`/`unit` = cách bán chính, `units` = cách bán khác như thùng/hộp, `bulk*` = giá sỉ cho cách bán chính).
 - Giỏ: `[{ id, qty, unit? }]` (`unit` trống = cách bán chính).
@@ -43,8 +47,8 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 
 - **Định dạng file sao lưu**: bản 2 mã hóa AES-GCM 256, khóa sinh bằng PBKDF2-SHA256 600.000 vòng,
   các trường `app, version, encrypted, cipher, kdf, iterations, salt, iv, data`; bên trong là
-  `{ app, version: 1, createdAt, products, photos, shop?, orders?, orderKeepDays? }`. Khôi phục thì THAY món/ảnh,
-  còn đơn đã bán thì GỘP vào lịch sử (không xóa đơn đang có). Phải luôn khôi phục được
+  `{ app, version: 1, createdAt, products, photos, shop?, orders?, orderKeepDays?, debts? }`. Khôi phục thì THAY món/ảnh,
+  còn đơn đã bán và sổ nợ thì GỘP (không xóa dữ liệu đang có). Phải luôn khôi phục được
   cả file bản 2 lẫn file cũ bản 1 (chưa mã hóa). Đổi định dạng là các file sao lưu đã có sẽ không mở được.
 - **Tên khóa localStorage, tên/phiên bản/kho IndexedDB và cấu trúc dữ liệu ở trên**: đổi mà không có đoạn chuyển đổi là mất dữ liệu trên điện thoại.
   Giữ nguyên đoạn chuyển đổi `packName/packSize` (bản 8) sang `units`.

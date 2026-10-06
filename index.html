@@ -75,7 +75,7 @@
     display: none;
   }
   #suggest {
-    position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5;
     background: #fff; border-radius: 14px; border: 3px solid var(--ink);
     max-height: 60vh; overflow-y: auto; display: none;
     box-shadow: 0 10px 30px rgba(0,0,0,.35);
@@ -232,12 +232,55 @@
   .cust-chips { margin-top: 8px; }
   .cust-chips .chip { color: #6b21a8; border-color: #d8b4fe; min-height: 44px; font-size: 18px; }
   .order-cust { font-size: 18px; font-weight: 800; color: #6b21a8; margin-bottom: 4px; }
+  /* Nút chọn khách trên màn hình chính: chọn tên trước rồi mới chọn hàng */
+  .cust-bar {
+    width: 100%; min-height: 50px; margin-top: 8px; padding: 0 12px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: #faf5ff; color: #6b21a8; border: 2px solid #d8b4fe; font-size: 19px; font-weight: 800;
+  }
+  .cust-bar.set { background: #6b21a8; color: #fff; border-color: #6b21a8; }
+  .cust-bar #custBarText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .switch-row {
     display: flex; align-items: center; gap: 12px; padding: 12px; margin-top: 4px;
     background: #faf5ff; border: 2px solid #d8b4fe; border-radius: 12px; font-size: 20px; font-weight: 800;
   }
   .switch-row input { width: 30px; height: 30px; flex-shrink: 0; accent-color: #7c3aed; }
   .opt-note { font-size: 17px; color: var(--muted); line-height: 1.4; margin: 8px 0 14px; }
+  /* ---------- Sổ ghi nợ ---------- */
+  .cust-debt { font-size: 17px; font-weight: 800; color: #b45309; margin-top: 6px; }
+  .btn-debt {
+    width: 100%; min-height: 56px; border-radius: 14px; margin: -10px 0 22px;
+    background: #fff; color: #6b21a8; border: 2px solid #a855f7; font-size: 19px; font-weight: 800;
+  }
+  .btn-debt:disabled { opacity: .5; }
+  .order-money .r.debt b, .order-money .r.debt span { color: #6b21a8; font-weight: 800; }
+  .debt-sum {
+    background: #fff; border: 3px solid #a855f7; border-radius: 16px; padding: 14px;
+    margin-bottom: 12px; text-align: center; font-size: 19px;
+  }
+  .debt-sum b { display: block; font-size: clamp(30px, 10vw, 42px); color: #6b21a8; }
+  .debt-card { background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .debt-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 20px; font-weight: 800; }
+  .debt-top b { color: #6b21a8; font-size: 22px; white-space: nowrap; }
+  .debt-top b.zero { color: var(--green); }
+  .debt-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .debt-btns button { flex: 1; min-height: 48px; border-radius: 10px; font-size: 18px; font-weight: 800; }
+  .btn-debt-pay { background: var(--green); color: #fff; }
+  .btn-debt-detail { background: #f3f4f6; color: var(--ink); border: 2px solid #9ca3af; }
+  .debt-rows { margin-top: 10px; border-top: 2px dashed #d1d5db; padding-top: 6px; }
+  .debt-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; font-size: 16px; }
+  .debt-row .t { flex: 1; min-width: 0; color: var(--muted); }
+  .debt-row .a { font-weight: 800; white-space: nowrap; font-size: 18px; }
+  .debt-row .a.no { color: #6b21a8; }
+  .debt-row .a.tra { color: var(--green); }
+  .debt-row .x {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #fff;
+    border: 2px solid #fca5a5; color: var(--red); font-weight: 900;
+  }
+  .btn-show-paid {
+    width: 100%; min-height: 48px; border-radius: 12px; background: #f9fafb;
+    border: 2px dashed #9ca3af; color: var(--muted); font-size: 17px; font-weight: 700; margin-top: 4px;
+  }
   .rev-cust { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 18px; font-weight: 800; }
   .rev-cust select {
     flex: 1; min-width: 0; min-height: 50px; font-size: 18px; padding: 0 8px;
@@ -293,7 +336,7 @@
   /* Hai nút chuyển: Từng ngày / Tổng doanh thu */
   .hist-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
   .hist-tab {
-    flex: 1; min-height: 48px; border-radius: 12px; font-size: 18px; font-weight: 800;
+    flex: 1; min-width: 0; min-height: 48px; padding: 0 2px; border-radius: 12px; font-size: 15px; font-weight: 800; white-space: nowrap;
     background: rgba(255,255,255,.15); color: #fff; border: 2px solid rgba(255,255,255,.55);
   }
   .hist-tab.on { background: #fff; color: #0f766e; border-color: #fff; }
@@ -548,6 +591,7 @@
     <button id="clearSearch" aria-label="Xóa chữ">✕</button>
     <div id="suggest" role="listbox"></div>
   </div>
+  <button class="cust-bar" id="btnCust" style="display:none"><span id="custBarText">👤 Chạm để ghi tên khách</span></button>
 </header>
 
 <main id="cart"></main>
@@ -571,7 +615,8 @@
     </div>
     <div class="hist-tabs" id="histTabs">
       <button class="hist-tab on" data-mode="day">📅 Từng ngày</button>
-      <button class="hist-tab" data-mode="sum">📊 Tổng doanh thu</button>
+      <button class="hist-tab" data-mode="sum">📊 Doanh thu</button>
+      <button class="hist-tab" data-mode="debt" id="tabDebt" style="display:none">📒 Sổ nợ</button>
     </div>
     <div class="day-nav" id="dayNav">
       <button class="day-btn" id="btnDayPrev" aria-label="Ngày trước">◀</button>
@@ -724,6 +769,7 @@
       <label class="pay-label" for="custIn">👤 Tên khách <span class="opt">(không bắt buộc)</span></label>
       <input id="custIn" type="text" autocomplete="off" maxlength="40" placeholder="Ví dụ: Chị Lan">
       <div class="chips cust-chips" id="custChips"></div>
+      <div class="cust-debt" id="custDebtInfo"></div>
     </div>
     <div class="pay-sum">
       <div class="pay-row"><span>Tổng tiền</span><b id="payTotal"></b></div>
@@ -732,6 +778,7 @@
       <div class="pay-bills" id="payBills"></div>
     </div>
     <button class="btn-pay-done" id="btnPayDone">✅ Xong — lưu đơn</button>
+    <button class="btn-debt" id="btnPayDebt" style="display:none">📒 Ghi nợ</button>
     <span class="pay-label">Chạm số tiền khách đưa:</span>
     <div class="chips cash-chips" id="cashChips"></div>
     <label class="pay-label" for="cashIn">Hoặc gõ số tiền:</label>
@@ -757,6 +804,8 @@
     </div>
     <label class="switch-row" for="optCustomer"><input type="checkbox" id="optCustomer"> 👤 Ghi tên khách khi bán</label>
     <p class="opt-note">Bật nếu cần biết ai mua (ví dụ bán đồ dùng, bán sỉ): lúc tính tiền sẽ có ô ghi tên khách, xem được doanh thu theo từng khách. Tạp hóa bán lẻ thì để tắt.</p>
+    <label class="switch-row" for="optDebt"><input type="checkbox" id="optDebt"> 📒 Cho ghi nợ (mua chịu, trả sau)</label>
+    <p class="opt-note">Bật thì lúc tính tiền có nút Ghi nợ, và trong Đơn đã bán có Sổ nợ xem ai còn nợ bao nhiêu. Bật cái này sẽ tự bật Ghi tên khách.</p>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnShopCancel">Hủy</button>
       <button class="btn-ok" id="btnShopSave">💾 Lưu</button>
@@ -772,6 +821,53 @@
     <button class="btn-big save" id="btnEndPay">💵 Đã bán — tính tiền thối</button>
     <button class="btn-big discard" id="btnEndDiscard">🗑️ Không mua — xóa đơn</button>
     <button class="btn-big close" id="btnEndBack">Quay lại</button>
+  </div>
+</div>
+
+<!-- Popup trả nợ -->
+<div class="overlay" id="debtPayModal">
+  <div class="modal" role="dialog" aria-labelledby="debtPayTitle">
+    <div class="modal-head">
+      <button class="btn-x" id="btnCloseDebtPay" type="button" aria-label="Đóng">✕</button>
+      <h2 id="debtPayTitle">💵 Trả nợ</h2>
+    </div>
+    <div class="pay-sum">
+      <div class="pay-row"><span>Khách</span><b id="dpName"></b></div>
+      <div class="pay-row"><span>Đang nợ</span><b id="dpOwe"></b></div>
+      <div class="pay-row"><span>Khách đưa</span><b id="dpGiven">—</b></div>
+      <div class="pay-row big ok" id="dpResultRow"><span id="dpLabel">Còn nợ</span><b id="dpLeft">—</b></div>
+    </div>
+    <button class="btn-pay-done" id="btnDebtPayOk">✅ Lưu trả nợ</button>
+    <span class="pay-label">Chạm số tiền khách trả:</span>
+    <div class="chips cash-chips" id="dpChips"></div>
+    <label class="pay-label" for="dpIn">Hoặc gõ số tiền:</label>
+    <div class="field">
+      <div class="price-line">
+        <input id="dpIn" type="text" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 100.000">
+        <button class="btn-000" id="btnDp000" type="button">000</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup chọn khách mua (chọn trước khi chọn hàng) -->
+<div class="overlay" id="custModal">
+  <div class="modal" role="dialog" aria-labelledby="custModalTitle">
+    <div class="modal-head">
+      <button class="btn-x" id="btnCloseCust" type="button" aria-label="Đóng">✕</button>
+      <h2 id="custModalTitle">👤 Khách mua</h2>
+    </div>
+    <div class="field">
+      <label for="custPickIn">Tên khách</label>
+      <input id="custPickIn" type="text" autocomplete="off" maxlength="40" placeholder="Ví dụ: Bác A">
+      <div class="cust-debt" id="custPickDebt"></div>
+    </div>
+    <span class="pay-label" id="custPickLabel">Khách quen (chạm để chọn):</span>
+    <div class="chips cust-chips" id="custPickChips" style="margin-bottom:16px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCustClear">Bỏ tên</button>
+      <button class="btn-ok" id="btnCustOk">✔ Chọn</button>
+    </div>
   </div>
 </div>
 
@@ -793,7 +889,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 27; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 30; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -894,12 +990,13 @@
   function openDb() {
     if (!dbPromise) dbPromise = new Promise(function (resolve, reject) {
       if (!window.indexedDB) { reject(new Error('Không có IndexedDB')); return; }
-      // Bản 2 thêm kho "orders" (lịch sử đơn), khóa là thời điểm bán (ms)
-      var req = indexedDB.open('taphoa', 2);
+      // Bản 2 thêm kho "orders" (lịch sử đơn), bản 3 thêm kho "debts" (sổ nợ); khóa là thời điểm (ms)
+      var req = indexedDB.open('taphoa', 3);
       req.onupgradeneeded = function () {
         var db = req.result;
         if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos');
         if (!db.objectStoreNames.contains('orders')) db.createObjectStore('orders', { keyPath: 'ts' });
+        if (!db.objectStoreNames.contains('debts')) db.createObjectStore('debts', { keyPath: 'ts' });
       };
       req.onsuccess = function () {
         var db = req.result;
@@ -1489,11 +1586,12 @@
   }
   // orders: toàn bộ lịch sử đơn đang giữ. shop/orders/orderKeepDays là trường thêm sau,
   // file cũ không có thì khôi phục bỏ qua.
-  function buildBackupJson(orders) {
+  function buildBackupJson(orders, debts) {
     var data = { app: 'taphoa', version: 1, createdAt: new Date().toISOString(), products: products, photos: {} };
     if (getShop().name) data.shop = getShop();
     products.forEach(function (p) { if (photos[p.id]) data.photos[p.id] = photos[p.id]; });
     data.orders = orders || [];
+    data.debts = debts || [];
     data.orderKeepDays = keepDays();
     return JSON.stringify(data);
   }
@@ -1507,10 +1605,10 @@
     var token = {}, orderCount = 0;
     preparingToken = token;
     updateBackupUI();
-    getAllOrders().then(function (orders) {
-      orders = orders || [];
+    Promise.all([getAllOrders(), getAllDebts()]).then(function (res) {
+      var orders = res[0] || [];
       orderCount = orders.length;
-      return encryptBackup(buildBackupJson(orders), pw);
+      return encryptBackup(buildBackupJson(orders, res[1] || []), pw);
     }).then(function (json) {
       if (preparingToken !== token) return;
       var name = backupFileName();
@@ -1633,11 +1731,13 @@
     var when = data.createdAt && !isNaN(new Date(data.createdAt)) ? fmtDateTime(new Date(data.createdAt)) : 'không rõ';
     var fileShop = cleanShop(data.shop);
     var fileOrders = Array.isArray(data.orders) ? data.orders.map(cleanOrder).filter(Boolean) : [];
+    var fileDebts = Array.isArray(data.debts) ? data.debts.map(cleanDebt).filter(Boolean) : [];
     var fileKeep = KEEP_OPTIONS.some(function (o) { return o.days === data.orderKeepDays; }) ? data.orderKeepDays : 0;
     askConfirm('📥 Khôi phục dữ liệu?',
       'File sao lưu ngày ' + when + ':\n' + (fileShop.name ? '• Tiệm: ' + fileShop.name + '\n' : '') +
       '• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n' +
-      (fileOrders.length ? '• ' + fileOrders.length + ' đơn đã bán\n' : '') + '\n' +
+      (fileOrders.length ? '• ' + fileOrders.length + ' đơn đã bán\n' : '') +
+      (fileDebts.length ? '• ' + fileDebts.length + ' dòng sổ nợ\n' : '') + '\n' +
       'Danh sách món hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.' +
       (fileOrders.length ? '\nĐơn đã bán được GỘP vào lịch sử, đơn đang có trên máy vẫn giữ nguyên.' : ''),
       'Khôi phục', function () {
@@ -1647,6 +1747,11 @@
         if (fileOrders.length) {
           ordersStore('readwrite', function (st) { fileOrders.forEach(function (o) { st.put(o); }); })
             .catch(function () { toast('⚠️ Không lưu được lịch sử đơn, máy có thể đã đầy bộ nhớ'); });
+        }
+        // Sổ nợ cũng gộp (trùng thời điểm thì giữ một), không xóa dòng nợ đang có trên máy
+        if (fileDebts.length) {
+          dbTx('debts', 'readwrite', function (tx) { fileDebts.forEach(function (d) { tx.objectStore('debts').put(d); }); })
+            .catch(function () { toast('⚠️ Không lưu được sổ nợ'); });
         }
         products = list;
         save(KEY_PRODUCTS, products);
@@ -1683,6 +1788,16 @@
     };
     var cust = cleanName(o.customer);
     if (cust) out.customer = cust;
+    if (num(o.debt) > 0) out.debt = o.debt;
+    return out;
+  }
+  function cleanDebt(d) {
+    if (!d || !(typeof d.ts === 'number' && d.ts > 0) || (d.type !== 'no' && d.type !== 'tra') ||
+        !(typeof d.amount === 'number' && d.amount > 0)) return null;
+    var name = cleanName(d.customer);
+    if (!name) return null;
+    var out = { ts: d.ts, customer: name, type: d.type, amount: d.amount };
+    if (typeof d.orderTs === 'number') out.orderTs = d.orderTs;
     return out;
   }
   function importBackup(file) {
@@ -2054,16 +2169,79 @@
   }
   function cleanName(n) { return typeof n === 'string' ? n.trim().replace(/\s+/g, ' ').slice(0, 40) : ''; }
   // Khách hay mua gần đây (mới nhất đứng đầu), để chạm 1 lần là điền tên
-  function recentCustomers() {
-    try { var v = JSON.parse(localStorage.getItem(KEY_RECENT_CUST) || '[]'); return Array.isArray(v) ? v.slice(0, 12) : []; }
+  var MAX_CUSTOMERS = 300;
+  function allCustomers() {
+    try { var v = JSON.parse(localStorage.getItem(KEY_RECENT_CUST) || '[]'); return Array.isArray(v) ? v.slice(0, MAX_CUSTOMERS) : []; }
     catch (e) { return []; }
   }
-  function addRecentCustomer(name) {
-    var list = recentCustomers().filter(function (n) { return plain(n) !== plain(name); });
-    list.unshift(name);
-    try { localStorage.setItem(KEY_RECENT_CUST, JSON.stringify(list.slice(0, 12))); } catch (e) {}
+  function recentCustomers() { return allCustomers().slice(0, 12); }
+  // Gõ vài chữ là hiện khách khớp (không dấu): tên bắt đầu bằng chữ gõ > một từ bắt đầu bằng chữ gõ > chứa ở giữa;
+  // cùng mức thì khách mua gần đây đứng trước. Có cả khách đang nợ dù lâu không mua.
+  function matchCustomers(q, limit) {
+    var names = allCustomers();
+    if (typeof debtCache === 'object') {
+      Object.keys(debtCache).forEach(function (k) {
+        if (!names.some(function (n) { return plain(n) === k; })) names.push(debtCache[k].name);
+      });
+    }
+    q = plain(q).replace(/\s+/g, ' ').trim();
+    if (!q) return names.slice(0, limit);
+    var words = q.split(' ');
+    return names.map(function (n, i) {
+      var p = plain(n);
+      if (!words.every(function (w) { return p.indexOf(w) >= 0; })) return null;
+      var score = p.indexOf(q) === 0 ? 0 : (' ' + p).indexOf(' ' + words[0]) >= 0 ? 1 : 2;
+      return { n: n, score: score, i: i };
+    }).filter(Boolean).sort(function (a, b) { return a.score - b.score || a.i - b.i; })
+      .slice(0, limit).map(function (x) { return x.n; });
   }
-  var pendingCustomer = '';   // tên khách của đơn vừa mở lại, để điền sẵn khi tính tiền lại
+  // Nút tên khách (có tô vàng chữ đang gõ, kèm số nợ nếu có)
+  function customerChipsHtml(q, limit) {
+    var key = plain(q || '').trim();
+    return matchCustomers(q || '', limit).map(function (n) {
+      var owe = settings().allowDebt && typeof custOwes === 'function' ? custOwes(n) : 0;
+      return '<button class="chip" type="button" data-cust="' + escapeHtml(n) + '">' +
+        (key ? highlight(n, key) : escapeHtml(n)) + (owe ? ' · nợ ' + money.format(owe) : '') + '</button>';
+    }).join('');
+  }
+  // Gõ "chị lan" mà đã có khách "Chị Lan" thì dùng lại đúng tên cũ cho đồng nhất
+  function canonicalName(name) {
+    name = cleanName(name);
+    if (!name) return '';
+    var key = plain(name);
+    var hit = allCustomers().find(function (n) { return plain(n) === key; });
+    if (hit) return hit;
+    var g = typeof debtCache === 'object' && debtCache[key];
+    return g ? g.name : name;
+  }
+  function addRecentCustomer(name) {
+    var all = recentCustomers();
+    var same = all.find(function (n) { return plain(n) === plain(name); });
+    var list = all.filter(function (n) { return plain(n) !== plain(name); });
+    list.unshift(same || name);   // giữ cách viết tên đã có
+    try { localStorage.setItem(KEY_RECENT_CUST, JSON.stringify(list.slice(0, MAX_CUSTOMERS))); } catch (e) {}
+  }
+  // Khách của đơn đang tính: chọn ngay từ đầu (trước khi chọn hàng), lưu cùng giỏ để lỡ tải lại không mất
+  var KEY_CART_CUST = 'taphoa_cart_customer';
+  var currentCustomer = (function () { try { return cleanName(localStorage.getItem(KEY_CART_CUST) || ''); } catch (e) { return ''; } })();
+  function setCurrentCustomer(name) {
+    currentCustomer = name ? canonicalName(name) : '';
+    try {
+      if (currentCustomer) localStorage.setItem(KEY_CART_CUST, currentCustomer);
+      else localStorage.removeItem(KEY_CART_CUST);
+    } catch (e) {}
+    renderCustBar();
+  }
+  function renderCustBar() {
+    var bar = $('btnCust'), on = !!settings().askCustomer;
+    bar.style.display = on ? '' : 'none';
+    if (!on) return;
+    var owe = currentCustomer && settings().allowDebt ? custOwes(currentCustomer) : 0;
+    $('custBarText').textContent = !currentCustomer ? '👤 Chạm để ghi tên khách'
+      : owe ? '👤 ' + currentCustomer + ' · nợ ' + fmt(owe) + ' ✏️'
+      : '👤 Khách: ' + currentCustomer + ' ✏️';
+    bar.classList.toggle('set', !!currentCustomer);
+  }
 
   // ---------- Tính tiền thối ----------
   var payModal = $('payModal'), cashIn = $('cashIn');
@@ -2112,6 +2290,7 @@
       $('payBills').innerHTML = '';
     }
     $('btnPayDone').disabled = !(given && given >= total);
+    updateDebtButton(given, total);
     document.querySelectorAll('#cashChips .chip').forEach(function (ch) {
       ch.classList.toggle('on', Number(ch.dataset.v) === given);
     });
@@ -2127,12 +2306,11 @@
     // Tên khách: chỉ hiện khi máy này bật "Ghi tên khách khi bán"
     var askCust = settings().askCustomer;
     $('custBox').style.display = askCust ? '' : 'none';
-    $('custIn').value = askCust ? pendingCustomer : '';
-    $('custChips').innerHTML = askCust ? recentCustomers().map(function (n) {
-      return '<button class="chip" type="button" data-cust="' + escapeHtml(n) + '">' + escapeHtml(n) + '</button>';
-    }).join('') : '';
+    $('custIn').value = askCust ? currentCustomer : '';
+    $('custChips').innerHTML = askCust ? customerChipsHtml('', 8) : '';
     updatePay();
     openModal(payModal);
+    refreshDebtCache().then(updatePay);
   }
   $('custChips').addEventListener('click', function (e) {
     var ch = e.target.closest('[data-cust]');
@@ -2162,11 +2340,11 @@
     btn.disabled = true;
     var given = Number(digitsOnly(cashIn.value)) || 0, total = cartTotal;
     var order = buildOrder(given);
-    var cust = settings().askCustomer ? cleanName($('custIn').value) : '';
+    var cust = settings().askCustomer ? canonicalName($('custIn').value) : '';
     if (cust) order.customer = cust;
     saveOrder(order).then(function () {
       if (cust) addRecentCustomer(cust);
-      pendingCustomer = '';
+      setCurrentCustomer('');
       cart = [];
       commitCart();
       closeModal(payModal);
@@ -2177,6 +2355,221 @@
       toast('⚠️ Không lưu được đơn, thử bấm lại');
     });
   });
+
+  // ---------- Sổ ghi nợ (IndexedDB kho "debts", KHÔNG tự xóa theo thời gian giữ lịch sử) ----------
+  // Dòng sổ nợ: { ts, customer, type: 'no' (mua nợ) | 'tra' (trả nợ), amount, orderTs? }
+  // Số nợ của một khách = tổng 'no' − tổng 'tra' (gộp theo tên không dấu, không phân biệt hoa thường)
+  var lastTs = 0;
+  function uniqueTs() { var t = Date.now(); if (t <= lastTs) t = lastTs + 1; lastTs = t; return t; }
+  function dbTx(stores, mode, fn) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(stores, mode), result = fn(tx);
+        tx.oncomplete = function () { resolve(result && result.result); };
+        tx.onerror = function () { reject(tx.error); };
+        tx.onabort = function () { reject(tx.error); };
+      });
+    });
+  }
+  function getAllDebts() {
+    return dbTx('debts', 'readonly', function (tx) { return tx.objectStore('debts').getAll(); });
+  }
+  function debtGroups(entries) {
+    var g = {};
+    (entries || []).slice().sort(function (a, b) { return a.ts - b.ts; }).forEach(function (d) {
+      var k = plain(d.customer);
+      if (!g[k]) g[k] = { key: k, name: d.customer, balance: 0, entries: [] };
+      g[k].name = d.customer;   // dùng cách viết tên mới nhất
+      g[k].balance += d.type === 'no' ? d.amount : -d.amount;
+      g[k].entries.push(d);
+    });
+    return g;
+  }
+  // Xóa đơn kèm dòng nợ của đơn đó (một lần ghi, không bị lệch giữa đơn và sổ nợ)
+  function deleteOrderWithDebt(ts) {
+    return getAllDebts().then(function (all) {
+      var linked = (all || []).filter(function (d) { return d.orderTs === ts; });
+      return dbTx(['orders', 'debts'], 'readwrite', function (tx) {
+        tx.objectStore('orders').delete(ts);
+        linked.forEach(function (d) { tx.objectStore('debts').delete(d.ts); });
+      });
+    });
+  }
+
+  // ---- Trong popup tiền thối: nút Ghi nợ + nhắc khách đang nợ bao nhiêu ----
+  var debtCache = {};   // nạp khi mở popup tiền thối
+  function custOwes(name) { var g = debtCache[plain(name)]; return g ? Math.max(0, g.balance) : 0; }
+  function refreshDebtCache() {
+    if (!settings().allowDebt) { debtCache = {}; return Promise.resolve(); }
+    return getAllDebts().then(function (all) { debtCache = debtGroups(all); }).catch(function () {});
+  }
+  function updateDebtButton(given, total) {
+    var btn = $('btnPayDebt'), info = $('custDebtInfo');
+    if (!settings().allowDebt) { btn.style.display = 'none'; info.textContent = ''; return; }
+    btn.style.display = '';
+    var name = canonicalName($('custIn').value), owe = total - given, old = name ? custOwes(name) : 0;
+    info.textContent = name && old ? '📒 ' + name + ' đang nợ ' + fmt(old) : '';
+    if (!name) { btn.disabled = true; btn.textContent = '📒 Ghi nợ (nhập tên khách trước)'; }
+    else if (owe <= 0) { btn.disabled = true; btn.textContent = '📒 Ghi nợ (khách đã trả đủ)'; }
+    else {
+      btn.disabled = false;
+      btn.textContent = given ? '📒 Trả ' + fmt(given) + ', ghi nợ ' + fmt(owe) : '📒 Ghi nợ ' + fmt(owe);
+    }
+  }
+  function sellOnDebt() {
+    var name = canonicalName($('custIn').value);
+    var given = Number(digitsOnly(cashIn.value)) || 0, total = cartTotal, owe = total - given;
+    if (!name || owe <= 0) return;
+    var old = custOwes(name);
+    askConfirm('📒 Ghi nợ?',
+      name + ' mua ' + fmt(total) + (given ? ', trả trước ' + fmt(given) : '') + '.\n' +
+      'Ghi nợ thêm: ' + fmt(owe) + '\nTổng nợ sau khi ghi: ' + fmt(old + owe), 'Ghi nợ', function () {
+        var order = buildOrder(given);
+        order.change = 0;
+        order.customer = name;
+        order.debt = owe;
+        var entry = { ts: uniqueTs(), customer: name, type: 'no', amount: owe, orderTs: order.ts };
+        dbTx(['orders', 'debts'], 'readwrite', function (tx) {
+          tx.objectStore('orders').put(order);
+          tx.objectStore('debts').put(entry);
+        }).then(function () {
+          addRecentCustomer(name);
+          setCurrentCustomer('');
+          cart = [];
+          commitCart();
+          closeModal(payModal);
+          window.scrollTo(0, 0);
+          toast('📒 Đã ghi nợ ' + fmt(owe) + ' cho ' + name + '. Tổng nợ: ' + fmt(old + owe));
+        }).catch(function () { toast('⚠️ Không ghi được nợ, thử lại'); });
+      });
+  }
+  $('btnPayDebt').addEventListener('click', sellOnDebt);
+  $('custIn').addEventListener('input', function () {
+    updateDebtButton(Number(digitsOnly(cashIn.value)) || 0, cartTotal);
+    $('custChips').innerHTML = customerChipsHtml(this.value, 8);
+  });
+
+  // ---- Tab Sổ nợ trong màn Đơn đã bán ----
+  var debtOpenKey = '', debtShowPaid = false, debtGroupsShown = {};
+  function renderDebts() {
+    historyList.innerHTML = '<div class="empty">⏳ Đang tải…</div>';
+    getAllDebts().then(function (all) {
+      if (histMode !== 'debt') return;
+      debtGroupsShown = debtGroups(all);
+      var groups = Object.keys(debtGroupsShown).map(function (k) { return debtGroupsShown[k]; });
+      var owing = groups.filter(function (g) { return g.balance > 0; }).sort(function (a, b) { return b.balance - a.balance; });
+      var paid = groups.filter(function (g) { return g.balance <= 0; }).sort(function (a, b) { return a.name.localeCompare(b.name, 'vi'); });
+      var sum = owing.reduce(function (s, g) { return s + g.balance; }, 0);
+      var html = '<div class="debt-sum">📒 Khách đang nợ<b>' + fmt(sum) + '</b>' + owing.length + ' khách</div>';
+      if (!owing.length) html += '<div class="empty">Không có ai đang nợ. 🎉</div>';
+      owing.forEach(function (g) { html += debtCard(g); });
+      if (paid.length) {
+        html += '<button class="btn-show-paid" type="button" data-showpaid="1">' +
+          (debtShowPaid ? '▲ Ẩn' : '▼ Xem') + ' khách đã trả hết (' + paid.length + ')</button>';
+        if (debtShowPaid) paid.forEach(function (g) { html += debtCard(g); });
+      }
+      historyList.innerHTML = html;
+    }).catch(function () {
+      historyList.innerHTML = '<div class="empty">⚠️ Không đọc được sổ nợ.</div>';
+    });
+  }
+  function debtCard(g) {
+    var open = debtOpenKey === g.key;
+    var html = '<div class="debt-card">' +
+      '<div class="debt-top"><span>👤 ' + escapeHtml(g.name) + '</span>' +
+      '<b class="' + (g.balance > 0 ? '' : 'zero') + '">' + (g.balance > 0 ? 'nợ ' + fmt(g.balance) : 'đã trả hết') + '</b></div>' +
+      '<div class="debt-btns">' +
+        (g.balance > 0 ? '<button class="btn-debt-pay" type="button" data-dpay="' + escapeHtml(g.key) + '">💵 Trả nợ</button>' : '') +
+        '<button class="btn-debt-detail" type="button" data-ddetail="' + escapeHtml(g.key) + '">' + (open ? '▲ Ẩn chi tiết' : '📜 Chi tiết') + '</button>' +
+      '</div>';
+    if (open) {
+      html += '<div class="debt-rows">' + g.entries.slice().reverse().map(function (d) {
+        return '<div class="debt-row"><span class="t">' + fullTime(d.ts) + '</span>' +
+          '<span class="a ' + d.type + '">' + (d.type === 'no' ? '+ Mua nợ ' : '− Đã trả ') + fmt(d.amount) + '</span>' +
+          (d.type === 'tra' ? '<button class="x" type="button" data-ddel="' + d.ts + '" aria-label="Xóa lần trả này">✕</button>' : '') +
+          '</div>';
+      }).join('') + '</div>';
+    }
+    return html + '</div>';
+  }
+  // Xóa một lần trả nợ ghi nhầm (dòng mua nợ thì xóa qua đơn hàng)
+  function deleteDebtPayment(ts) {
+    var d = null;
+    Object.keys(debtGroupsShown).forEach(function (k) {
+      debtGroupsShown[k].entries.forEach(function (e) { if (e.ts === ts) d = e; });
+    });
+    if (!d) return;
+    askConfirm('🗑️ Xóa lần trả nợ này?', d.customer + ' trả ' + fmt(d.amount) + ' lúc ' + fullTime(d.ts) +
+      '.\nXóa thì số nợ của khách tăng lại ' + fmt(d.amount) + '.', 'Xóa', function () {
+      dbTx('debts', 'readwrite', function (tx) { tx.objectStore('debts').delete(ts); })
+        .then(renderDebts, function () { toast('⚠️ Không xóa được'); });
+    });
+  }
+
+  // ---- Popup trả nợ ----
+  var debtPayModal = $('debtPayModal'), dpIn = $('dpIn'), dpGroup = null;
+  function openDebtPay(key) {
+    dpGroup = debtGroupsShown[key];
+    if (!dpGroup || dpGroup.balance <= 0) return;
+    var owe = dpGroup.balance;
+    $('dpName').textContent = dpGroup.name;
+    $('dpOwe').textContent = fmt(owe);
+    var opts = [owe];
+    [10000, 50000, 100000, 200000, 500000].forEach(function (v) { if (v < owe) opts.push(v); });
+    [100000, 200000, 500000].forEach(function (step) { opts.push(Math.ceil(owe / step) * step); });
+    opts = opts.filter(function (v, i) { return v > 0 && opts.indexOf(v) === i; }).sort(function (a, b) { return a - b; }).slice(0, 8);
+    $('dpChips').innerHTML = opts.map(function (v) {
+      return '<button class="chip" type="button" data-v="' + v + '">' + (v === owe ? 'Trả hết ' : '') + money.format(v) + '</button>';
+    }).join('');
+    dpIn.value = '';
+    updateDebtPay();
+    openModal(debtPayModal);
+  }
+  function updateDebtPay() {
+    var d = digitsOnly(dpIn.value).replace(/^0+/, '');
+    dpIn.value = d ? money.format(Number(d)) : '';
+    var given = Number(d) || 0, owe = dpGroup ? dpGroup.balance : 0, row = $('dpResultRow');
+    $('dpGiven').textContent = given ? fmt(given) : '—';
+    row.classList.remove('ok', 'short');
+    if (!given) { $('dpLabel').textContent = 'Còn nợ'; $('dpLeft').textContent = '—'; }
+    else if (given > owe) { row.classList.add('ok'); $('dpLabel').textContent = 'Trả hết nợ, thối lại'; $('dpLeft').textContent = fmt(given - owe); }
+    else { row.classList.add(given === owe ? 'ok' : 'short'); $('dpLabel').textContent = 'Còn nợ'; $('dpLeft').textContent = fmt(owe - given); }
+    $('btnDebtPayOk').disabled = !given;
+    document.querySelectorAll('#dpChips .chip').forEach(function (ch) { ch.classList.toggle('on', Number(ch.dataset.v) === given); });
+  }
+  function saveDebtPay() {
+    if (!dpGroup || $('btnDebtPayOk').disabled) return;
+    var given = Number(digitsOnly(dpIn.value)) || 0, owe = dpGroup.balance;
+    var paid = Math.min(given, owe);   // trả dư thì chỉ ghi đúng số nợ, phần dư thối lại
+    if (paid <= 0) return;
+    $('btnDebtPayOk').disabled = true;
+    var entry = { ts: uniqueTs(), customer: dpGroup.name, type: 'tra', amount: paid };
+    dbTx('debts', 'readwrite', function (tx) { tx.objectStore('debts').put(entry); }).then(function () {
+      closeModal(debtPayModal);
+      renderDebts();
+      toast('✅ ' + dpGroup.name + ' trả ' + fmt(paid) +
+        (owe - paid > 0 ? '. Còn nợ ' + fmt(owe - paid) : '. Đã trả hết nợ') +
+        (given > owe ? '. Thối lại ' + fmt(given - owe) : ''));
+    }).catch(function () {
+      $('btnDebtPayOk').disabled = false;
+      toast('⚠️ Không lưu được, thử lại');
+    });
+  }
+  $('dpChips').addEventListener('click', function (e) {
+    var ch = e.target.closest('.chip');
+    if (!ch) return;
+    dpIn.value = ch.dataset.v;
+    dpIn.blur();
+    updateDebtPay();
+  });
+  dpIn.addEventListener('input', updateDebtPay);
+  $('btnDp000').addEventListener('click', function () {
+    var d = digitsOnly(dpIn.value);
+    if (d && d.length < 10) { dpIn.value = d + '000'; updateDebtPay(); }
+    dpIn.focus();
+  });
+  $('btnDebtPayOk').addEventListener('click', saveDebtPay);
+  $('btnCloseDebtPay').addEventListener('click', function () { closeModal(debtPayModal); });
 
   // ---------- Lịch sử đơn đã bán (IndexedDB, giữ 90 ngày) ----------
   // Đơn: { ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change }
@@ -2211,7 +2604,7 @@
       return { id: c.id, name: p.name, unit: c.unit || '', unitName: c.unit || mainUnitName(p),
         qty: c.qty, price: price, sub: price * c.qty };
     });
-    return { ts: Date.now(), items: items, total: cartTotal, given: given, change: Math.max(0, given - cartTotal) };
+    return { ts: uniqueTs(), items: items, total: cartTotal, given: given, change: Math.max(0, given - cartTotal) };
   }
   function saveOrder(order) { return ordersStore('readwrite', function (st) { st.put(order); }); }
   function deleteOrder(ts) { return ordersStore('readwrite', function (st) { st.delete(ts); }); }
@@ -2264,7 +2657,10 @@
           }).join('<br>') + '</div>' +
           '<div class="order-money">' +
             '<div class="r total"><span>Tổng đơn</span><b>' + fmt(o.total) + '</b></div>' +
-            (o.given
+            (o.debt > 0
+              ? (o.given ? '<div class="r"><span>💵 Trả trước</span><b>' + fmt(o.given) + '</b></div>' : '') +
+                '<div class="r debt"><span>📒 Ghi nợ</span><b>' + fmt(o.debt) + '</b></div>'
+              : o.given
               ? '<div class="r"><span>💵 Khách đưa</span><b>' + fmt(o.given) + '</b></div>' +
                 '<div class="r change"><span>Thối lại</span><b>' + fmt(o.change) + '</b></div>'
               : '<div class="r none">Không ghi tiền khách đưa</div>') +
@@ -2288,6 +2684,7 @@
   function openHistory() {
     histDay = 0;
     histMode = 'day';
+    $('tabDebt').style.display = settings().allowDebt ? '' : 'none';
     showHistory();
     historyScreen.classList.add('open');
     historyList.scrollTop = 0;
@@ -2310,6 +2707,7 @@
   function reopenOrder(o) {
     var msg = 'Đưa đơn ' + fmt(o.total) + ' lúc ' + timeOf(o) + ' trở lại giỏ để sửa hoặc tính lại?\n' +
       'Đơn này sẽ được bỏ khỏi lịch sử; bấm Xong lần nữa sẽ lưu lại.' +
+      (o.debt > 0 ? '\n📒 Khoản ghi nợ ' + fmt(o.debt) + ' của đơn này cũng được bỏ khỏi sổ nợ.' : '') +
       (cart.length ? '\n\n⚠️ Giỏ đang có ' + cart.length + ' món sẽ bị thay bằng đơn này.' : '');
     askConfirm('↩️ Mở lại đơn?', msg, 'Mở lại', function () {
       var missing = 0;
@@ -2322,8 +2720,8 @@
         cart.push(line);
       });
       commitCart();
-      pendingCustomer = o.customer || '';   // tính tiền lại thì điền sẵn tên khách cũ
-      deleteOrder(o.ts).catch(function () {});
+      setCurrentCustomer(o.customer || '');   // tính tiền lại thì điền sẵn tên khách cũ
+      deleteOrderWithDebt(o.ts).catch(function () {});
       closeHistory();
       window.scrollTo(0, 0);
       toast(missing ? '↩️ Đã mở lại đơn (' + missing + ' món đã bị xóa khỏi danh sách nên không thêm được)'
@@ -2332,8 +2730,9 @@
   }
   function removeOrder(o) {
     askConfirm('🗑️ Xóa đơn này?', 'Xóa đơn ' + fmt(o.total) + ' lúc ' + timeOf(o) +
-      ' khỏi lịch sử? Doanh thu trong ngày sẽ trừ đi số này.', 'Xóa đơn', function () {
-      deleteOrder(o.ts).then(renderHistory, function () { toast('⚠️ Không xóa được đơn'); });
+      ' khỏi lịch sử? Doanh thu trong ngày sẽ trừ đi số này.' +
+      (o.debt > 0 ? '\n📒 Khoản ghi nợ ' + fmt(o.debt) + ' của đơn này cũng bị bỏ khỏi sổ nợ.' : ''), 'Xóa đơn', function () {
+      deleteOrderWithDebt(o.ts).then(renderHistory, function () { toast('⚠️ Không xóa được đơn'); });
     });
   }
 
@@ -2357,6 +2756,11 @@
   }
 
   historyList.addEventListener('click', function (e) {
+    var t = e.target.closest('button');
+    if (t && t.dataset.dpay) { openDebtPay(t.dataset.dpay); return; }
+    if (t && t.dataset.ddetail) { debtOpenKey = debtOpenKey === t.dataset.ddetail ? '' : t.dataset.ddetail; renderDebts(); return; }
+    if (t && t.dataset.ddel) { deleteDebtPayment(Number(t.dataset.ddel)); return; }
+    if (t && t.dataset.showpaid) { debtShowPaid = !debtShowPaid; renderDebts(); return; }
     var rangeBtn = e.target.closest('button[data-range]');
     if (rangeBtn) { setRevRange(rangeBtn.dataset.range); return; }
     var dayBtn = e.target.closest('button[data-day]');
@@ -2412,7 +2816,9 @@
     });
     $('dayNav').style.display = histMode === 'day' ? '' : 'none';
     historyList.scrollTop = 0;
-    if (histMode === 'day') renderHistory(); else renderRevenue();
+    if (histMode === 'day') renderHistory();
+    else if (histMode === 'debt') renderDebts();
+    else renderRevenue();
   }
   function setRevRange(k) {
     revRange = k;
@@ -2476,9 +2882,10 @@
           '</select></div>';
         if (revCustomer) list = list.filter(function (o) { return (o.customer || NO_NAME) === revCustomer; });
       }
-      var total = 0, byDay = {};
+      var total = 0, byDay = {}, debtTotal = 0;
       list.forEach(function (o) {
         total += o.total;
+        debtTotal += o.debt > 0 ? o.debt : 0;
         var key = ymd(new Date(o.ts));
         if (!byDay[key]) byDay[key] = { n: 0, sum: 0 };
         byDay[key].n++;
@@ -2491,6 +2898,7 @@
         '<div class="rev-total">' + fmt(total) + '</div>' +
         '<div class="rev-sub"><b>' + list.length + '</b> đơn' +
         (list.length ? ' · trung bình ' + fmt(Math.round(total / list.length)) + ' / đơn' : '') + '</div>' +
+        (debtTotal > 0 ? '<div class="rev-sub" style="color:#6b21a8;font-weight:800">📒 Trong đó ghi nợ: ' + fmt(debtTotal) + '</div>' : '') +
         (b.from < oldest ? '<div class="rev-note">Chỉ còn lưu đơn từ ngày ' + fmtDate(oldest) + ' (giữ ' + keepLabel(keepDays()) + ').</div>' : '') +
         '</div>';
       var keys = Object.keys(byDay).sort().reverse();
@@ -2556,22 +2964,75 @@
     $('shopNameIn').value = shop.name;
     $('shopError').textContent = '';
     $('optCustomer').checked = !!settings().askCustomer;
+    $('optDebt').checked = !!settings().allowDebt;
     openModal(shopModal);
   }
   function saveShop() {
     var shop = cleanShop({ name: $('shopNameIn').value });
     setShop(shop);
-    var cust = $('optCustomer').checked, changed = cust !== !!settings().askCustomer;
-    saveSettings({ askCustomer: cust });
+    var debt = $('optDebt').checked;
+    var cust = $('optCustomer').checked || debt;   // ghi nợ thì phải có tên khách
+    var old = settings();
+    saveSettings({ askCustomer: cust, allowDebt: debt });
+    if (!cust) setCurrentCustomer('');
+    refreshDebtCache().then(renderCustBar);
     closeModal(shopModal);
-    toast(changed ? (cust ? '👤 Đã bật ghi tên khách khi bán' : 'Đã tắt ghi tên khách')
+    toast(debt !== !!old.allowDebt ? (debt ? '📒 Đã bật ghi nợ' : 'Đã tắt ghi nợ (sổ nợ cũ vẫn giữ)')
+      : cust !== !!old.askCustomer ? (cust ? '👤 Đã bật ghi tên khách khi bán' : 'Đã tắt ghi tên khách')
       : shop.name ? '🏪 Đã lưu: ' + shop.name : 'Đã lưu');
   }
   $('btnShop').addEventListener('click', openShop);
+  $('optDebt').addEventListener('change', function () { if (this.checked) $('optCustomer').checked = true; });
+  $('optCustomer').addEventListener('change', function () { if (!this.checked) $('optDebt').checked = false; });
   $('btnShopCancel').addEventListener('click', function () { closeModal(shopModal); });
   $('btnShopSave').addEventListener('click', saveShop);
   $('shopNameIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') saveShop(); });
   renderShop();
+
+  // ---------- Chọn khách mua trước khi chọn hàng ----------
+  var custModal = $('custModal'), custPickIn = $('custPickIn');
+  function updateCustPickDebt() {
+    var name = canonicalName(custPickIn.value), owe = name && settings().allowDebt ? custOwes(name) : 0;
+    $('custPickDebt').textContent = owe ? '📒 ' + name + ' đang nợ ' + fmt(owe) : '';
+  }
+  function openCustPicker() {
+    custPickIn.value = '';
+    custPickIn.placeholder = currentCustomer ? 'Đang chọn: ' + currentCustomer : 'Gõ tên, ví dụ: Bác A';
+    renderCustPick();
+    openModal(custModal);
+    refreshDebtCache().then(renderCustPick);
+    setTimeout(function () { custPickIn.focus(); }, 50);   // mở là gõ được ngay
+  }
+  function renderCustPick() {
+    var q = custPickIn.value, html = customerChipsHtml(q, 12);
+    $('custPickLabel').textContent = plain(q).trim() ? 'Khách khớp (chạm để chọn):' : 'Khách quen (chạm để chọn):';
+    $('custPickLabel').style.display = html ? '' : 'none';
+    $('custPickChips').innerHTML = html;
+    updateCustPickDebt();
+  }
+  $('btnCust').addEventListener('click', openCustPicker);
+  custPickIn.addEventListener('input', renderCustPick);
+  custPickIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') $('btnCustOk').click(); });
+  // Chạm tên khách quen là chọn luôn
+  $('custPickChips').addEventListener('click', function (e) {
+    var ch = e.target.closest('[data-cust]');
+    if (!ch) return;
+    setCurrentCustomer(ch.dataset.cust);
+    closeModal(custModal);
+    toast('👤 Đang bán cho: ' + currentCustomer);
+  });
+  $('btnCustOk').addEventListener('click', function () {
+    // Ô trống thì giữ khách đang chọn (muốn bỏ tên thì bấm "Bỏ tên")
+    if (!cleanName(custPickIn.value)) { closeModal(custModal); return; }
+    setCurrentCustomer(custPickIn.value);
+    closeModal(custModal);
+    if (currentCustomer) toast('👤 Đang bán cho: ' + currentCustomer);
+  });
+  $('btnCustClear').addEventListener('click', function () { setCurrentCustomer(''); closeModal(custModal); });
+  $('btnCloseCust').addEventListener('click', function () { closeModal(custModal); });
+  // Sửa tên ngay trong popup tiền thối thì nút trên màn hình chính cũng đổi theo
+  $('custIn').addEventListener('change', function () { setCurrentCustomer(this.value); });
+  refreshDebtCache().then(renderCustBar);
 
   // ---------- Xóa & tạo đơn mới ----------
   // Hỏi rõ: bán xong thì qua popup tiền thối để lưu đủ tiền khách đưa/thối lại;
@@ -2588,7 +3049,7 @@
     closeModal(endModal);
   });
   $('btnEndDiscard').addEventListener('click', function () {
-    pendingCustomer = '';
+    setCurrentCustomer('');
     cart = [];
     commitCart();
     closeModal(endModal);
