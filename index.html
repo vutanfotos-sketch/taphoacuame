@@ -264,6 +264,41 @@
   .btn-reopen { background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd; }
   .btn-del-order { background: #fff; color: var(--red); border: 2px solid #fca5a5; }
   .hist-note { text-align: center; font-size: 16px; color: var(--muted); margin: 14px 0 6px; }
+  /* Hai nút chuyển: Từng ngày / Tổng doanh thu */
+  .hist-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .hist-tab {
+    flex: 1; min-height: 48px; border-radius: 12px; font-size: 18px; font-weight: 800;
+    background: rgba(255,255,255,.15); color: #fff; border: 2px solid rgba(255,255,255,.55);
+  }
+  .hist-tab.on { background: #fff; color: #0f766e; border-color: #fff; }
+  .rev-chips { margin-bottom: 12px; }
+  .rev-chips .chip { color: var(--ink); border-color: #9ca3af; }
+  .rev-chips .chip.on { background: #0f766e; border-color: #0f766e; color: #fff; }
+  .rev-dates { display: flex; gap: 10px; margin-bottom: 12px; }
+  .rev-dates label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 17px; font-weight: 800; }
+  .rev-dates input {
+    width: 100%; min-height: 52px; padding: 0 8px; font-size: 18px; background: #fff;
+    border: 2px solid #6b7280; border-radius: 10px; color: var(--ink);
+  }
+  .rev-card {
+    background: #fff; border: 3px solid #0f766e; border-radius: 16px;
+    padding: 16px; margin-bottom: 14px; text-align: center;
+  }
+  .rev-range { font-size: 18px; font-weight: 700; color: var(--muted); }
+  .rev-label { font-size: 18px; font-weight: 800; margin-top: 8px; }
+  .rev-total { font-size: clamp(34px, 11vw, 48px); font-weight: 900; color: #0f766e; white-space: nowrap; line-height: 1.2; }
+  .rev-sub { font-size: 18px; margin-top: 4px; }
+  .rev-note { font-size: 16px; color: #b45309; margin-top: 8px; }
+  .rev-days-title { font-size: 18px; font-weight: 800; margin: 4px 0 8px; }
+  .rev-day {
+    width: 100%; min-height: 56px; display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 2px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 8px; text-align: left; font-size: 18px; color: var(--ink);
+  }
+  .rev-day:active { background: #f0fdfa; }
+  .rev-day .d { flex: 1; min-width: 0; font-weight: 700; }
+  .rev-day .n { font-size: 16px; color: var(--muted); white-space: nowrap; }
+  .rev-day b { font-size: 20px; color: var(--red); white-space: nowrap; }
   .keep-box {
     background: #fff; border: 2px solid var(--line); border-radius: 14px;
     padding: 12px; margin-top: 16px;
@@ -507,7 +542,11 @@
       <h2>📋 Đơn đã bán</h2>
       <button class="btn-close" id="btnCloseHistory">✕ Đóng</button>
     </div>
-    <div class="day-nav">
+    <div class="hist-tabs" id="histTabs">
+      <button class="hist-tab on" data-mode="day">📅 Từng ngày</button>
+      <button class="hist-tab" data-mode="sum">📊 Tổng doanh thu</button>
+    </div>
+    <div class="day-nav" id="dayNav">
       <button class="day-btn" id="btnDayPrev" aria-label="Ngày trước">◀</button>
       <div class="day-label" id="dayLabel"></div>
       <button class="day-btn" id="btnDayNext" aria-label="Ngày sau">▶</button>
@@ -709,7 +748,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 22; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 23; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -2070,14 +2109,18 @@
     var names = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     return (offset === 0 ? 'Hôm nay' : offset === 1 ? 'Hôm qua' : names[d.getDay()]) + '<br>' + date;
   }
-  var shownOrders = [];
+  var shownOrders = [], histToken = null;
   function renderHistory() {
     $('dayLabel').innerHTML = dayLabel(histDay);
     $('btnDayNext').disabled = histDay === 0;
     $('btnDayPrev').disabled = histDay >= keepDays() - 1;
     var from = dayStart(histDay).getTime(), to = from + DAY_MS;
     historyList.innerHTML = '<div class="empty">⏳ Đang tải…</div>';
+    // Chuyển tab/ngày nhanh: chỉ vẽ kết quả của lần bấm mới nhất
+    var token = {};
+    histToken = token;
     getOrders(from, to).then(function (list) {
+      if (histToken !== token || histMode !== 'day') return;
       shownOrders = (list || []).sort(function (a, b) { return b.ts - a.ts; });
       var revenue = shownOrders.reduce(function (s, o) { return s + o.total; }, 0);
       var html = '<div class="hist-sum"><b>' + shownOrders.length + '</b> đơn · Doanh thu <b>' + fmt(revenue) + '</b></div>';
@@ -2105,12 +2148,13 @@
         '<div class="hist-note">Đơn cũ hơn ' + keepLabel(keep) + ' sẽ tự xóa.</div>';
       historyList.innerHTML = html;
     }).catch(function () {
-      historyList.innerHTML = '<div class="empty">⚠️ Không đọc được lịch sử đơn.</div>';
+      if (histToken === token) historyList.innerHTML = '<div class="empty">⚠️ Không đọc được lịch sử đơn.</div>';
     });
   }
   function openHistory() {
     histDay = 0;
-    renderHistory();
+    histMode = 'day';
+    showHistory();
     historyScreen.classList.add('open');
     historyList.scrollTop = 0;
     document.body.style.overflow = 'hidden';
@@ -2172,6 +2216,10 @@
   }
 
   historyList.addEventListener('click', function (e) {
+    var rangeBtn = e.target.closest('button[data-range]');
+    if (rangeBtn) { setRevRange(rangeBtn.dataset.range); return; }
+    var dayBtn = e.target.closest('button[data-day]');
+    if (dayBtn) { openDayFromRevenue(dayBtn.dataset.day); return; }
     var keepBtn = e.target.closest('button[data-keep]');
     if (keepBtn) { setKeepDays(Number(keepBtn.dataset.keep)); return; }
     var btn = e.target.closest('button[data-act]');
@@ -2180,6 +2228,134 @@
     if (!o) return;
     if (btn.dataset.act === 'reopen') reopenOrder(o);
     else if (btn.dataset.act === 'del') removeOrder(o);
+  });
+
+  // ---------- Tổng doanh thu theo khoảng ngày tùy chọn ----------
+  var histMode = 'day';              // 'day' = xem từng ngày, 'sum' = tổng doanh thu
+  var revRange = 'today', revFrom = '', revTo = '', revToken = null;
+  var REV_RANGES = [
+    { k: 'today', label: 'Hôm nay' }, { k: 'yesterday', label: 'Hôm qua' }, { k: '7d', label: '7 ngày qua' },
+    { k: 'month', label: 'Tháng này' }, { k: 'lastmonth', label: 'Tháng trước' }, { k: 'custom', label: 'Tùy chọn' }
+  ];
+  var WEEKDAYS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+
+  function ymd(d) { return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()); }
+  function parseYmd(str) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || '');
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+  }
+  function fmtDate(d) { return two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + d.getFullYear(); }
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+
+  // Khoảng thời gian [from, to) của lựa chọn hiện tại
+  function revBounds() {
+    var today = dayStart(0), tomorrow = addDays(today, 1);
+    switch (revRange) {
+      case 'yesterday': return { from: addDays(today, -1), to: today };
+      case '7d': return { from: addDays(today, -6), to: tomorrow };
+      case 'month': return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: tomorrow };
+      case 'lastmonth':
+        return { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: new Date(today.getFullYear(), today.getMonth(), 1) };
+      case 'custom':
+        var a = parseYmd(revFrom) || today, b = parseYmd(revTo) || today;
+        if (a > b) { var t = a; a = b; b = t; }
+        return { from: a, to: addDays(b, 1) };
+      default: return { from: today, to: tomorrow };
+    }
+  }
+
+  function showHistory() {
+    document.querySelectorAll('#histTabs .hist-tab').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.mode === histMode);
+    });
+    $('dayNav').style.display = histMode === 'day' ? '' : 'none';
+    historyList.scrollTop = 0;
+    if (histMode === 'day') renderHistory(); else renderRevenue();
+  }
+  function setRevRange(k) {
+    revRange = k;
+    if (k === 'custom' && !revFrom) {
+      var today = dayStart(0);
+      revFrom = ymd(new Date(today.getFullYear(), today.getMonth(), 1));
+      revTo = ymd(today);
+    }
+    renderRevenue();
+  }
+  // Chạm một ngày trong bảng doanh thu: mở danh sách đơn của ngày đó
+  function openDayFromRevenue(key) {
+    var d = parseYmd(key);
+    if (!d) return;
+    histDay = Math.round((dayStart(0).getTime() - d.getTime()) / DAY_MS);
+    histMode = 'day';
+    showHistory();
+  }
+
+  function renderRevenue() {
+    var today = dayStart(0), oldest = dayStart(keepDays() - 1);
+    var b = revBounds(), last = addDays(b.to, -1);
+    var html = '<div class="chips rev-chips">' + REV_RANGES.map(function (r) {
+      return '<button class="chip' + (r.k === revRange ? ' on' : '') + '" type="button" data-range="' + r.k + '">' + r.label + '</button>';
+    }).join('') + '</div>';
+    if (revRange === 'custom') {
+      html += '<div class="rev-dates">' +
+        '<label>Từ ngày<input type="date" id="revFromIn" value="' + ymd(b.from) + '" min="' + ymd(oldest) + '" max="' + ymd(today) + '"></label>' +
+        '<label>Đến ngày<input type="date" id="revToIn" value="' + ymd(last) + '" min="' + ymd(oldest) + '" max="' + ymd(today) + '"></label>' +
+        '</div>';
+    }
+    html += '<div id="revResult"><div class="empty">⏳ Đang tính…</div></div>';
+    historyList.innerHTML = html;
+
+    var token = {};
+    revToken = token;
+    histToken = null;   // bỏ kết quả "từng ngày" đang tải dở
+    getOrders(b.from.getTime(), b.to.getTime()).then(function (list) {
+      if (revToken !== token || histMode !== 'sum') return;
+      list = list || [];
+      var total = 0, byDay = {};
+      list.forEach(function (o) {
+        total += o.total;
+        var key = ymd(new Date(o.ts));
+        if (!byDay[key]) byDay[key] = { n: 0, sum: 0 };
+        byDay[key].n++;
+        byDay[key].sum += o.total;
+      });
+      var rangeText = ymd(b.from) === ymd(last) ? 'Ngày ' + fmtDate(b.from)
+        : 'Từ ' + fmtDate(b.from) + ' đến ' + fmtDate(last);
+      var out = '<div class="rev-card"><div class="rev-range">' + rangeText + '</div>' +
+        '<div class="rev-label">Tổng doanh thu</div>' +
+        '<div class="rev-total">' + fmt(total) + '</div>' +
+        '<div class="rev-sub"><b>' + list.length + '</b> đơn' +
+        (list.length ? ' · trung bình ' + fmt(Math.round(total / list.length)) + ' / đơn' : '') + '</div>' +
+        (b.from < oldest ? '<div class="rev-note">Chỉ còn lưu đơn từ ngày ' + fmtDate(oldest) + ' (giữ ' + keepLabel(keepDays()) + ').</div>' : '') +
+        '</div>';
+      var keys = Object.keys(byDay).sort().reverse();
+      if (keys.length > 1 || (keys.length === 1 && revRange !== 'today' && revRange !== 'yesterday')) {
+        out += '<div class="rev-days-title">Doanh thu từng ngày (chạm để xem đơn):</div>' +
+          keys.map(function (k) {
+            var d = parseYmd(k), row = byDay[k];
+            return '<button class="rev-day" type="button" data-day="' + k + '">' +
+              '<span class="d">' + WEEKDAYS[d.getDay()] + ' ' + two(d.getDate()) + '/' + two(d.getMonth() + 1) + '</span>' +
+              '<span class="n">' + row.n + ' đơn</span><b>' + fmt(row.sum) + '</b></button>';
+          }).join('');
+      } else if (!keys.length) {
+        out += '<div class="empty">Chưa có đơn nào trong khoảng này.</div>';
+      }
+      $('revResult').innerHTML = out;
+    }).catch(function () {
+      if (revToken === token) $('revResult').innerHTML = '<div class="empty">⚠️ Không đọc được lịch sử đơn.</div>';
+    });
+  }
+
+  $('histTabs').addEventListener('click', function (e) {
+    var b = e.target.closest('.hist-tab');
+    if (!b || b.dataset.mode === histMode) return;
+    histMode = b.dataset.mode;
+    showHistory();
+  });
+  // Chọn ngày trên lịch iPhone xong thì tính lại
+  historyList.addEventListener('change', function (e) {
+    if (e.target.id === 'revFromIn') { revFrom = e.target.value; renderRevenue(); }
+    else if (e.target.id === 'revToIn') { revTo = e.target.value; renderRevenue(); }
   });
 
   // ---------- Tên tiệm (mỗi máy tự điền, chỉ có tên) ----------
