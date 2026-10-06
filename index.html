@@ -94,6 +94,13 @@
   .item-top { display: flex; gap: 10px; align-items: flex-start; }
   .item-name { flex: 1; font-size: 24px; font-weight: 800; line-height: 1.25; word-break: break-word; }
   .item-unit { color: var(--muted); font-size: 19px; margin-top: 4px; }
+  .item-unit s { color: #6b7280; }
+  .item-unit .sale { color: var(--green); }
+  .tag {
+    display: inline-block; background: var(--green); color: #fff;
+    font-size: 16px; font-weight: 800; padding: 2px 8px; border-radius: 8px; vertical-align: 2px;
+  }
+  .item-next { margin-top: 4px; font-size: 18px; color: var(--green); font-weight: 700; }
   .btn-remove {
     width: 52px; height: 52px; flex-shrink: 0; border-radius: 12px;
     background: #fee2e2; color: var(--red-dark); font-size: 26px; font-weight: 900;
@@ -167,6 +174,25 @@
   .btn-cancel { background: #e5e7eb; color: var(--ink); }
   .btn-ok { background: var(--green); color: #fff; }
   .btn-danger { background: var(--red); color: #fff; }
+  .opt { font-weight: 400; color: var(--muted); font-size: 18px; }
+  .tier-row {
+    background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 10px;
+  }
+  .tier-line { display: flex; align-items: center; gap: 8px; font-size: 20px; }
+  .tier-line + .tier-line { margin-top: 8px; }
+  .tier-row input {
+    width: auto; min-height: 54px; padding: 0 10px; font-size: 24px;
+    border: 3px solid #6b7280; border-radius: 10px; outline: none; background: #fff;
+  }
+  .tier-row input:focus { border-color: var(--blue); }
+  .tier-row input.invalid { border-color: var(--red); }
+  .tier-row .tier-min { width: 72px; text-align: center; }
+  .tier-row .tier-price { flex: 1; min-width: 0; }
+  .tier-del {
+    width: 50px; height: 50px; flex-shrink: 0; border-radius: 10px;
+    background: #fee2e2; color: var(--red-dark); border: 2px solid #fca5a5;
+    font-size: 22px; font-weight: 900;
+  }
   .btn-delete {
     width: 100%; margin-top: 14px; min-height: 56px; border-radius: 14px;
     background: #fff; color: var(--red); border: 2px solid var(--red);
@@ -204,6 +230,7 @@
   .pl-name { font-size: 22px; font-weight: 700; line-height: 1.25; word-break: break-word; }
   .pl-name mark { background: #fde047; color: inherit; border-radius: 3px; }
   .pl-price { font-size: 22px; font-weight: 900; color: var(--red); margin-top: 2px; }
+  .pl-tiers { font-size: 17px; font-weight: 700; color: var(--green); margin-top: 2px; }
   .pl-edit {
     flex-shrink: 0; background: var(--blue); color: #fff; font-size: 19px; font-weight: 800;
     padding: 12px 14px; border-radius: 12px;
@@ -274,6 +301,20 @@
       <div class="hint" id="priceHint"></div>
       <div class="error" id="priceError"></div>
     </div>
+    <div class="field">
+      <label>Giá sỉ khi mua nhiều <span class="opt">(để trống nếu không có)</span></label>
+      <div class="tier-row">
+        <div class="tier-line">Mua từ
+          <input id="bulkMin" class="tier-min" type="text" inputmode="numeric" autocomplete="off">
+          cái trở lên</div>
+        <div class="tier-line">giá
+          <input id="bulkPrice" class="tier-price" type="text" inputmode="numeric" autocomplete="off" placeholder="Giá sỉ">
+          đ / cái
+          <button class="tier-del" id="btnClearBulk" type="button" aria-label="Bỏ giá sỉ">✕</button></div>
+      </div>
+      <div class="hint" id="bulkHint"></div>
+      <div class="error" id="bulkError"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelAdd">Hủy</button>
       <button class="btn-ok" id="btnSaveAdd">💾 Lưu</button>
@@ -316,7 +357,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 4; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 5; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -384,6 +425,10 @@
     return null;
   }
   function $(id) { return document.getElementById(id); }
+
+  // Giá sỉ: mua từ bulkMin cái trở lên thì tất cả các cái tính giá bulkPrice
+  function hasBulk(p) { return p.bulkPrice > 0 && p.bulkMin >= 2; }
+  function unitPrice(p, qty) { return hasBulk(p) && qty >= p.bulkMin ? p.bulkPrice : p.price; }
 
   var toastTimer;
   function toast(text) {
@@ -484,6 +529,7 @@
     var p = findProduct(id);
     if (!p) return;
     var line = cart.find(function (c) { return c.id === id; });
+    var oldQty = line ? line.qty : 0;
     if (line) {
       line.qty += qty || 1;
       // Đưa món vừa chọn lên đầu cho dễ thấy
@@ -494,15 +540,25 @@
       cart.unshift(line);
     }
     commitCart();
-    toast('Đã thêm: ' + p.name + ' (SL: ' + line.qty + ')');
+    toast('Đã thêm: ' + p.name + ' (SL: ' + line.qty + ')' + bulkNote(p, oldQty, line.qty));
   }
 
   function setQty(id, qty) {
     var line = cart.find(function (c) { return c.id === id; });
     if (!line) return;
+    var p = findProduct(id), oldQty = line.qty;
     if (qty <= 0) cart.splice(cart.indexOf(line), 1);
     else line.qty = qty;
     commitCart();
+    var note = qty > 0 ? bulkNote(p, oldQty, qty) : '';
+    if (note) toast(note.replace(/^ · /, ''));
+  }
+
+  // Báo khi vừa đủ số lượng để được giá sỉ
+  function bulkNote(p, oldQty, newQty) {
+    var before = oldQty > 0 ? unitPrice(p, oldQty) : p.price;
+    var after = unitPrice(p, newQty);
+    return after < before ? ' · 🏷️ Giá sỉ ' + fmt(after) + ' / cái' : '';
   }
 
   function commitCart() {
@@ -520,12 +576,18 @@
       var html = '';
       cart.forEach(function (c) {
         var p = findProduct(c.id);
-        var sub = p.price * c.qty;
+        var unit = unitPrice(p, c.qty);
+        var sub = unit * c.qty;
         total += sub; count += c.qty;
+        var unitHtml = unit < p.price
+          ? '<div class="item-unit"><s>' + fmt(p.price) + '</s> <b class="sale">' + fmt(unit) +
+            ' / món</b> <span class="tag">🏷️ Giá sỉ</span></div>'
+          : '<div class="item-unit">' + fmt(p.price) + ' / món</div>' +
+            (hasBulk(p) ? '<div class="item-next">Mua từ ' + p.bulkMin + ': ' + fmt(p.bulkPrice) + ' / món</div>' : '');
         html += '<div class="item">' +
           '<div class="item-top">' +
             '<div style="flex:1"><div class="item-name">' + escapeHtml(p.name) + '</div>' +
-            '<div class="item-unit">' + fmt(p.price) + ' / món</div></div>' +
+            unitHtml + '</div>' +
             '<button class="btn-remove" data-act="remove" data-id="' + c.id + '" aria-label="Bỏ món">✕</button>' +
           '</div>' +
           '<div class="item-bottom">' +
@@ -604,7 +666,9 @@
     list.forEach(function (p) {
       html += '<button class="pl-item" data-id="' + p.id + '">' +
         '<div class="pl-info"><div class="pl-name">' + (q ? highlight(p.name, q) : escapeHtml(p.name)) + '</div>' +
-        '<div class="pl-price">' + fmt(p.price) + '</div></div>' +
+        '<div class="pl-price">' + fmt(p.price) + '</div>' +
+        (hasBulk(p) ? '<div class="pl-tiers">🏷️ Từ ' + p.bulkMin + ' cái: ' + fmt(p.bulkPrice) + '</div>' : '') +
+        '</div>' +
         '<span class="pl-edit">✏️ Sửa</span></button>';
     });
     plListEl.innerHTML = html;
@@ -634,6 +698,7 @@
   // ---------- Thêm / sửa món ----------
   var addModal = $('addModal');
   var nameIn = $('newName'), priceIn = $('newPrice');
+  var bulkMinIn = $('bulkMin'), bulkPriceIn = $('bulkPrice');
   var addToCartAfterSave = false;
   var editingId = null; // null = đang thêm món mới
 
@@ -643,7 +708,28 @@
     var old = editingId !== null && findProduct(editingId);
     $('priceHint').innerHTML = (d ? 'Giá: <b>' + fmt(Number(d)) + '</b>' : '') +
       (old ? '<br>Giá cũ: ' + fmt(old.price) : '');
+    updateBulkHint();
   }
+
+  // Ví dụ cụ thể để chủ tiệm thấy ngay khách sẽ trả bao nhiêu
+  function updateBulkHint() {
+    var bm = Number(digitsOnly(bulkMinIn.value)) || 0;
+    var bd = digitsOnly(bulkPriceIn.value).replace(/^0+/, '');
+    bulkMinIn.value = bm ? String(bm) : '';
+    bulkPriceIn.value = bd ? money.format(Number(bd)) : '';
+    var price = Number(digitsOnly(priceIn.value));
+    var bp = Number(bd);
+    $('bulkHint').innerHTML = bm >= 2 && bp > 0 && price > bp
+      ? 'Khách mua ' + bm + ' cái: <b>' + fmt(bp * bm) + '</b> (giá lẻ là ' + fmt(price * bm) + ')'
+      : '';
+  }
+  bulkMinIn.addEventListener('input', updateBulkHint);
+  bulkPriceIn.addEventListener('input', updateBulkHint);
+  $('btnClearBulk').addEventListener('click', function () {
+    bulkMinIn.value = '2';
+    bulkPriceIn.value = '';
+    updateBulkHint();
+  });
 
   function openProductModal(product, prefillName, thenAddToCart) {
     editingId = product ? product.id : null;
@@ -652,11 +738,14 @@
     $('btnDeleteProduct').style.display = product ? 'block' : 'none';
     nameIn.value = product ? product.name : (prefillName || '');
     priceIn.value = product ? String(product.price) : '';
+    var bulk = product && hasBulk(product);
+    bulkMinIn.value = bulk ? String(product.bulkMin) : '2';
+    bulkPriceIn.value = bulk ? String(product.bulkPrice) : '';
     updatePriceHint();
     $('nameError').textContent = '';
     $('priceError').textContent = '';
-    nameIn.classList.remove('invalid');
-    priceIn.classList.remove('invalid');
+    $('bulkError').textContent = '';
+    [nameIn, priceIn, bulkMinIn, bulkPriceIn].forEach(function (el) { el.classList.remove('invalid'); });
     openModal(addModal);
     setTimeout(function () {
       if (product || prefillName) { priceIn.focus(); priceIn.select(); }
@@ -679,12 +768,25 @@
   function saveProduct() {
     var name = nameIn.value.trim().replace(/\s+/g, ' ');
     var price = Number(digitsOnly(priceIn.value));
+    var bulkMin = Number(digitsOnly(bulkMinIn.value)) || 0;
+    var bulkPrice = Number(digitsOnly(bulkPriceIn.value)) || 0;
     var ok = true;
 
     $('nameError').textContent = '';
     $('priceError').textContent = '';
-    nameIn.classList.remove('invalid');
-    priceIn.classList.remove('invalid');
+    $('bulkError').textContent = '';
+    [nameIn, priceIn, bulkMinIn, bulkPriceIn].forEach(function (el) { el.classList.remove('invalid'); });
+
+    // Giá sỉ: để trống ô giá sỉ nghĩa là món này không có giá sỉ
+    if (bulkPrice) {
+      if (bulkMin < 2) {
+        $('bulkError').textContent = 'Số lượng mua sỉ phải từ 2 cái trở lên.';
+        bulkMinIn.classList.add('invalid'); ok = false;
+      } else if (price && bulkPrice >= price) {
+        $('bulkError').textContent = 'Giá sỉ phải thấp hơn giá lẻ (' + fmt(price) + ').';
+        bulkPriceIn.classList.add('invalid'); ok = false;
+      }
+    }
 
     if (!name) {
       $('nameError').textContent = 'Vui lòng nhập tên sản phẩm.';
@@ -699,11 +801,17 @@
     }
     if (!ok) return;
 
+    function applyBulk(p) {
+      if (bulkPrice) { p.bulkMin = bulkMin; p.bulkPrice = bulkPrice; }
+      else { delete p.bulkMin; delete p.bulkPrice; }
+    }
+
     if (editingId !== null) {
       // Sửa món có sẵn: giỏ hàng tự tính lại theo giá mới
       var edited = findProduct(editingId);
       edited.name = name;
       edited.price = price;
+      applyBulk(edited);
       save(KEY_PRODUCTS, products);
       closeModal(addModal);
       renderCart();
@@ -714,6 +822,7 @@
 
     var maxId = products.reduce(function (m, p) { return Math.max(m, p.id); }, 0);
     var product = { id: maxId + 1, name: name, price: price };
+    applyBulk(product);
     products.push(product);
     save(KEY_PRODUCTS, products);
     closeModal(addModal);
@@ -753,7 +862,8 @@
     var p = findProduct(qtyEditingId);
     var q = Number(digitsOnly(qtyIn.value)) || 0;
     qtyIn.value = q ? String(q) : '';
-    $('qtyHint').innerHTML = p && q ? 'Thành tiền: <b>' + fmt(p.price * q) + '</b>' : '';
+    $('qtyHint').innerHTML = p && q ? 'Thành tiền: <b>' + fmt(unitPrice(p, q) * q) + '</b>' +
+      (unitPrice(p, q) < p.price ? ' (giá sỉ ' + fmt(p.bulkPrice) + ' / cái)' : '') : '';
   }
   function openQtyModal(id) {
     var p = findProduct(id);
