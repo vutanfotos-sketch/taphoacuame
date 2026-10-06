@@ -29,8 +29,11 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 
 - localStorage: `taphoa_products`, `taphoa_cart`, `taphoa_last_backup`, `taphoa_backup_pw`, `taphoa_order_keep_days`,
   `taphoa_shop` (`{ name }`: chỉ tên tiệm; chủ tiệm không muốn có địa chỉ và số điện thoại).
+  `taphoa_settings` (`{ askCustomer }`: bật ghi tên khách, mặc định tắt vì tạp hóa không cần, tiệm đồ dùng cần),
+  `taphoa_recent_customers` (tên khách gần đây).
 - IndexedDB `taphoa` phiên bản 2: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
   kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm).
+- Đơn: `{ ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change, customer? }`.
 - Món: `{ id, name, price, unit?, units?: [{ name, price }], bulkMin?, bulkPrice? }`
   (`price`/`unit` = cách bán chính, `units` = cách bán khác như thùng/hộp, `bulk*` = giá sỉ cho cách bán chính).
 - Giỏ: `[{ id, qty, unit? }]` (`unit` trống = cách bán chính).

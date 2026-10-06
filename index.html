@@ -222,6 +222,27 @@
   .cash-chips .chip.on { background: var(--green); border-color: var(--green); color: #fff; }
   .pay-label { display: block; font-weight: 800; font-size: 20px; margin-bottom: 8px; }
   .btn-ok:disabled { opacity: .45; }
+  /* Tên khách (chỉ hiện khi bật "Ghi tên khách khi bán") */
+  .cust-box { background: #faf5ff; border: 2px solid #d8b4fe; border-radius: 14px; padding: 10px 12px; margin-bottom: 14px; }
+  .cust-box input {
+    width: 100%; min-height: 54px; padding: 0 12px; font-size: 22px;
+    border: 3px solid #6b7280; border-radius: 12px; outline: none; background: #fff;
+  }
+  .cust-box input:focus { border-color: #7c3aed; }
+  .cust-chips { margin-top: 8px; }
+  .cust-chips .chip { color: #6b21a8; border-color: #d8b4fe; min-height: 44px; font-size: 18px; }
+  .order-cust { font-size: 18px; font-weight: 800; color: #6b21a8; margin-bottom: 4px; }
+  .switch-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px; margin-top: 4px;
+    background: #faf5ff; border: 2px solid #d8b4fe; border-radius: 12px; font-size: 20px; font-weight: 800;
+  }
+  .switch-row input { width: 30px; height: 30px; flex-shrink: 0; accent-color: #7c3aed; }
+  .opt-note { font-size: 17px; color: var(--muted); line-height: 1.4; margin: 8px 0 14px; }
+  .rev-cust { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 18px; font-weight: 800; }
+  .rev-cust select {
+    flex: 1; min-width: 0; min-height: 50px; font-size: 18px; padding: 0 8px;
+    border: 2px solid #6b7280; border-radius: 10px; background: #fff; color: var(--ink);
+  }
   .btn-pay-done {
     width: 100%; min-height: 60px; border-radius: 14px; margin: 0 0 22px;
     background: var(--green); color: #fff; font-size: 21px; font-weight: 800;
@@ -516,7 +537,7 @@
 <body>
 
 <header>
-  <button class="shop-bar unset" id="btnShop"><span id="shopTitle">🏪 Bấm để đặt tên tiệm</span><span class="shop-edit">✏️</span></button>
+  <button class="shop-bar unset" id="btnShop"><span id="shopTitle">🏪 Bấm để đặt tên tiệm</span><span class="shop-edit">⚙️</span></button>
   <div class="head-row">
     <button class="btn-head" id="btnOpenList"><span class="ico">✏️</span>Sửa giá</button>
     <button class="btn-head" id="btnOpenAdd"><span class="ico">➕</span>Thêm SP</button>
@@ -699,6 +720,11 @@
 <div class="overlay" id="payModal">
   <div class="modal" role="dialog" aria-labelledby="payTitle">
     <h2 id="payTitle">💵 Tính tiền thối</h2>
+    <div class="cust-box" id="custBox" style="display:none">
+      <label class="pay-label" for="custIn">👤 Tên khách <span class="opt">(không bắt buộc)</span></label>
+      <input id="custIn" type="text" autocomplete="off" maxlength="40" placeholder="Ví dụ: Chị Lan">
+      <div class="chips cust-chips" id="custChips"></div>
+    </div>
     <div class="pay-sum">
       <div class="pay-row"><span>Tổng tiền</span><b id="payTotal"></b></div>
       <div class="pay-row"><span>Khách đưa</span><b id="payGiven">—</b></div>
@@ -722,13 +748,15 @@
 <!-- Popup thông tin tiệm -->
 <div class="overlay" id="shopModal">
   <div class="modal" role="dialog" aria-labelledby="shopModalTitle">
-    <h2 id="shopModalTitle">🏪 Tên tiệm</h2>
-    <p class="backup-note">Chỉ lưu trên điện thoại này, mỗi máy tự điền riêng. Tên tiệm hiện trên đầu app và sau này in lên hóa đơn.</p>
+    <h2 id="shopModalTitle">🏪 Tiệm &amp; cài đặt</h2>
+    <p class="backup-note">Chỉ lưu trên điện thoại này, mỗi máy tự chọn riêng.</p>
     <div class="field">
       <label for="shopNameIn">Tên tiệm</label>
       <input id="shopNameIn" type="text" autocomplete="off" maxlength="40" placeholder="Ví dụ: Tạp Hóa Cô Ba">
       <div class="error" id="shopError"></div>
     </div>
+    <label class="switch-row" for="optCustomer"><input type="checkbox" id="optCustomer"> 👤 Ghi tên khách khi bán</label>
+    <p class="opt-note">Bật nếu cần biết ai mua (ví dụ bán đồ dùng, bán sỉ): lúc tính tiền sẽ có ô ghi tên khách, xem được doanh thu theo từng khách. Tạp hóa bán lẻ thì để tắt.</p>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnShopCancel">Hủy</button>
       <button class="btn-ok" id="btnShopSave">💾 Lưu</button>
@@ -765,7 +793,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 26; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 27; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1649,10 +1677,13 @@
         qty: it.qty, price: it.price, sub: num(it.sub) >= 0 ? it.sub : it.price * it.qty
       };
     });
-    return {
+    var out = {
       ts: o.ts, items: items, total: o.total,
       given: num(o.given) >= 0 ? o.given : 0, change: num(o.change) >= 0 ? o.change : 0
     };
+    var cust = cleanName(o.customer);
+    if (cust) out.customer = cust;
+    return out;
   }
   function importBackup(file) {
     var reader = new FileReader();
@@ -2009,6 +2040,31 @@
   $('btnCancelQty').addEventListener('click', function () { closeModal(qtyModal); });
   $('btnSaveQty').addEventListener('click', saveQty);
 
+  // ---------- Cài đặt riêng từng máy ----------
+  // { askCustomer: true } = ghi tên khách khi bán (tiệm bán đồ dùng cần, tạp hóa thì tắt)
+  var KEY_SETTINGS = 'taphoa_settings', KEY_RECENT_CUST = 'taphoa_recent_customers';
+  function settings() {
+    try { var v = JSON.parse(localStorage.getItem(KEY_SETTINGS) || '{}'); return v && typeof v === 'object' ? v : {}; }
+    catch (e) { return {}; }
+  }
+  function saveSettings(patch) {
+    var v = settings();
+    Object.keys(patch).forEach(function (k) { v[k] = patch[k]; });
+    try { localStorage.setItem(KEY_SETTINGS, JSON.stringify(v)); } catch (e) {}
+  }
+  function cleanName(n) { return typeof n === 'string' ? n.trim().replace(/\s+/g, ' ').slice(0, 40) : ''; }
+  // Khách hay mua gần đây (mới nhất đứng đầu), để chạm 1 lần là điền tên
+  function recentCustomers() {
+    try { var v = JSON.parse(localStorage.getItem(KEY_RECENT_CUST) || '[]'); return Array.isArray(v) ? v.slice(0, 12) : []; }
+    catch (e) { return []; }
+  }
+  function addRecentCustomer(name) {
+    var list = recentCustomers().filter(function (n) { return plain(n) !== plain(name); });
+    list.unshift(name);
+    try { localStorage.setItem(KEY_RECENT_CUST, JSON.stringify(list.slice(0, 12))); } catch (e) {}
+  }
+  var pendingCustomer = '';   // tên khách của đơn vừa mở lại, để điền sẵn khi tính tiền lại
+
   // ---------- Tính tiền thối ----------
   var payModal = $('payModal'), cashIn = $('cashIn');
   var BILLS = [500000, 200000, 100000, 50000, 20000, 10000, 5000, 2000, 1000];
@@ -2068,9 +2124,20 @@
       return '<button class="chip" type="button" data-v="' + v + '">' + money.format(v) + '</button>';
     }).join('');
     cashIn.value = '';
+    // Tên khách: chỉ hiện khi máy này bật "Ghi tên khách khi bán"
+    var askCust = settings().askCustomer;
+    $('custBox').style.display = askCust ? '' : 'none';
+    $('custIn').value = askCust ? pendingCustomer : '';
+    $('custChips').innerHTML = askCust ? recentCustomers().map(function (n) {
+      return '<button class="chip" type="button" data-cust="' + escapeHtml(n) + '">' + escapeHtml(n) + '</button>';
+    }).join('') : '';
     updatePay();
     openModal(payModal);
   }
+  $('custChips').addEventListener('click', function (e) {
+    var ch = e.target.closest('[data-cust]');
+    if (ch) $('custIn').value = ch.dataset.cust;
+  });
 
   $('btnPay').addEventListener('click', openPay);
   $('cashChips').addEventListener('click', function (e) {
@@ -2094,7 +2161,12 @@
     if (btn.disabled) return;
     btn.disabled = true;
     var given = Number(digitsOnly(cashIn.value)) || 0, total = cartTotal;
-    saveOrder(buildOrder(given)).then(function () {
+    var order = buildOrder(given);
+    var cust = settings().askCustomer ? cleanName($('custIn').value) : '';
+    if (cust) order.customer = cust;
+    saveOrder(order).then(function () {
+      if (cust) addRecentCustomer(cust);
+      pendingCustomer = '';
       cart = [];
       commitCart();
       closeModal(payModal);
@@ -2186,6 +2258,7 @@
       shownOrders.forEach(function (o) {
         html += '<div class="order">' +
           '<div class="order-when">🕒 ' + fullTime(o.ts) + '</div>' +
+          (o.customer ? '<div class="order-cust">👤 Khách: ' + escapeHtml(o.customer) + '</div>' : '') +
           '<div class="order-items">' + o.items.map(function (it) {
             return escapeHtml(it.qty + ' ' + it.unitName + ' ' + it.name) + ' <span style="color:var(--muted)">(' + fmt(it.sub) + ')</span>';
           }).join('<br>') + '</div>' +
@@ -2249,6 +2322,7 @@
         cart.push(line);
       });
       commitCart();
+      pendingCustomer = o.customer || '';   // tính tiền lại thì điền sẵn tên khách cũ
       deleteOrder(o.ts).catch(function () {});
       closeHistory();
       window.scrollTo(0, 0);
@@ -2300,6 +2374,7 @@
   // ---------- Tổng doanh thu theo khoảng ngày tùy chọn ----------
   var histMode = 'day';              // 'day' = xem từng ngày, 'sum' = tổng doanh thu
   var revRange = 'today', revFrom = '', revTo = '', revToken = null;
+  var revCustomer = '', NO_NAME = '__khong_ten__';   // lọc doanh thu theo khách
   var REV_RANGES = [
     { k: 'today', label: 'Hôm nay' }, { k: 'yesterday', label: 'Hôm qua' }, { k: '7d', label: '7 ngày qua' },
     { k: 'month', label: 'Tháng này' }, { k: 'lastmonth', label: 'Tháng trước' }, { k: 'custom', label: 'Tùy chọn' }
@@ -2378,6 +2453,29 @@
     getOrders(b.from.getTime(), b.to.getTime()).then(function (list) {
       if (revToken !== token || histMode !== 'sum') return;
       list = list || [];
+      // Có ghi tên khách thì cho chọn xem riêng từng khách
+      var custHtml = '';
+      if (settings().askCustomer || list.some(function (o) { return o.customer; })) {
+        var byCust = {};
+        list.forEach(function (o) {
+          var k = o.customer || '';
+          if (!byCust[k]) byCust[k] = { n: 0, sum: 0 };
+          byCust[k].n++;
+          byCust[k].sum += o.total;
+        });
+        var names = Object.keys(byCust).filter(Boolean).sort(function (a, b) { return byCust[b].sum - byCust[a].sum; });
+        if (revCustomer && revCustomer !== NO_NAME && !byCust[revCustomer]) revCustomer = '';
+        custHtml = '<div class="rev-cust">👤 <select id="revCustSel">' +
+          '<option value="">Tất cả khách</option>' +
+          names.map(function (n) {
+            return '<option value="' + escapeHtml(n) + '"' + (n === revCustomer ? ' selected' : '') + '>' +
+              escapeHtml(n) + ' (' + byCust[n].n + ' đơn · ' + fmt(byCust[n].sum) + ')</option>';
+          }).join('') +
+          (byCust[''] ? '<option value="' + NO_NAME + '"' + (revCustomer === NO_NAME ? ' selected' : '') +
+            '>Không ghi tên (' + byCust[''].n + ' đơn)</option>' : '') +
+          '</select></div>';
+        if (revCustomer) list = list.filter(function (o) { return (o.customer || NO_NAME) === revCustomer; });
+      }
       var total = 0, byDay = {};
       list.forEach(function (o) {
         total += o.total;
@@ -2407,7 +2505,7 @@
       } else if (!keys.length) {
         out += '<div class="empty">Chưa có đơn nào trong khoảng này.</div>';
       }
-      $('revResult').innerHTML = out;
+      $('revResult').innerHTML = custHtml + out;
     }).catch(function () {
       if (revToken === token) $('revResult').innerHTML = '<div class="empty">⚠️ Không đọc được lịch sử đơn.</div>';
     });
@@ -2419,8 +2517,9 @@
     histMode = b.dataset.mode;
     showHistory();
   });
-  // Chọn ngày trên lịch iPhone xong thì tính lại
+  // Chọn ngày trên lịch iPhone (hoặc chọn khách) xong thì tính lại
   historyList.addEventListener('change', function (e) {
+    if (e.target.id === 'revCustSel') { revCustomer = e.target.value; renderRevenue(); return; }
     if (e.target.id === 'revFromIn') { revFrom = e.target.value; renderRevenue(); }
     else if (e.target.id === 'revToIn') { revTo = e.target.value; renderRevenue(); }
   });
@@ -2456,14 +2555,17 @@
     var shop = getShop();
     $('shopNameIn').value = shop.name;
     $('shopError').textContent = '';
+    $('optCustomer').checked = !!settings().askCustomer;
     openModal(shopModal);
-    setTimeout(function () { $('shopNameIn').focus(); }, 50);
   }
   function saveShop() {
     var shop = cleanShop({ name: $('shopNameIn').value });
     setShop(shop);
+    var cust = $('optCustomer').checked, changed = cust !== !!settings().askCustomer;
+    saveSettings({ askCustomer: cust });
     closeModal(shopModal);
-    toast(shop.name ? '🏪 Đã lưu tên tiệm: ' + shop.name : 'Đã bỏ tên tiệm');
+    toast(changed ? (cust ? '👤 Đã bật ghi tên khách khi bán' : 'Đã tắt ghi tên khách')
+      : shop.name ? '🏪 Đã lưu: ' + shop.name : 'Đã lưu');
   }
   $('btnShop').addEventListener('click', openShop);
   $('btnShopCancel').addEventListener('click', function () { closeModal(shopModal); });
@@ -2486,6 +2588,7 @@
     closeModal(endModal);
   });
   $('btnEndDiscard').addEventListener('click', function () {
+    pendingCustomer = '';
     cart = [];
     commitCart();
     closeModal(endModal);
