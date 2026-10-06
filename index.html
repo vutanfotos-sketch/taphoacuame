@@ -75,6 +75,19 @@
     border-bottom: 2px solid var(--line); font-size: 22px; color: var(--ink);
   }
   .sg-item:active { background: #fef3c7; }
+  .sg-name { flex: 1; min-width: 0; }
+
+  /* Ảnh nhỏ của món */
+  .thumb {
+    width: 56px; height: 56px; flex-shrink: 0; border-radius: 10px;
+    object-fit: cover; background: #f3f4f6; border: 2px solid var(--line);
+  }
+  .thumb-empty {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: #9ca3af;
+  }
+  .item .thumb { width: 72px; height: 72px; }
+  .pl-item .thumb { width: 64px; height: 64px; }
   .sg-item .sg-price { font-weight: 800; color: var(--red); white-space: nowrap; }
   .sg-item mark { background: #fde047; color: inherit; border-radius: 3px; }
   .sg-new { color: var(--blue); font-weight: 800; justify-content: center; }
@@ -178,6 +191,24 @@
   .btn-ok { background: var(--green); color: #fff; }
   .btn-danger { background: var(--red); color: #fff; }
   .opt { font-weight: 400; color: var(--muted); font-size: 18px; }
+  .photo-row { display: flex; gap: 12px; align-items: center; }
+  .photo-box {
+    width: 116px; height: 116px; flex-shrink: 0; border-radius: 14px; overflow: hidden;
+    border: 3px dashed #9ca3af; background: #f9fafb; color: #9ca3af;
+    display: flex; align-items: center; justify-content: center; font-size: 44px;
+  }
+  .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-btns { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .btn-photo {
+    min-height: 50px; border-radius: 12px; background: var(--blue); color: #fff;
+    font-size: 19px; font-weight: 800;
+  }
+  .btn-photo.alt { background: #e0e7ff; color: var(--blue); }
+  .btn-photo-del {
+    min-height: 44px; border-radius: 12px; background: #fff; color: var(--red);
+    border: 2px solid #fca5a5; font-size: 17px; font-weight: 700;
+  }
+  .file-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   .tier-row {
     background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 10px;
   }
@@ -300,6 +331,19 @@
   <div class="modal" role="dialog" aria-labelledby="addTitle">
     <h2 id="addTitle">➕ Thêm món mới</h2>
     <div class="field">
+      <label>Ảnh sản phẩm <span class="opt">(không bắt buộc)</span></label>
+      <div class="photo-row">
+        <div class="photo-box" id="photoBox">📷</div>
+        <div class="photo-btns">
+          <button class="btn-photo" id="btnPhotoCam" type="button">📷 Chụp ảnh</button>
+          <button class="btn-photo alt" id="btnPhotoPick" type="button">🖼️ Chọn ảnh có sẵn</button>
+          <button class="btn-photo-del" id="btnPhotoDel" type="button">🗑️ Bỏ ảnh</button>
+        </div>
+      </div>
+      <input class="file-hidden" id="photoCam" type="file" accept="image/*" capture="environment" tabindex="-1">
+      <input class="file-hidden" id="photoPick" type="file" accept="image/*" tabindex="-1">
+    </div>
+    <div class="field">
       <label for="newName">Tên sản phẩm</label>
       <input id="newName" type="text" autocomplete="off" placeholder="Ví dụ: Bánh mì sandwich">
       <div class="error" id="nameError"></div>
@@ -369,7 +413,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 6; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 7; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -441,6 +485,82 @@
   }
   function $(id) { return document.getElementById(id); }
 
+  // ---------- Ảnh món hàng (lưu trong IndexedDB vì localStorage quá nhỏ) ----------
+  var photos = {}; // id món -> ảnh dạng data URL
+  var dbPromise = null;
+  function openDb() {
+    if (!dbPromise) dbPromise = new Promise(function (resolve, reject) {
+      if (!window.indexedDB) { reject(new Error('Không có IndexedDB')); return; }
+      var req = indexedDB.open('taphoa', 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore('photos'); };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+    return dbPromise;
+  }
+  function photoWrite(fn) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('photos', 'readwrite');
+        fn(tx.objectStore('photos'));
+        tx.oncomplete = resolve;
+        tx.onerror = function () { reject(tx.error); };
+      });
+    });
+  }
+  function loadAllPhotos() {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve) {
+        var req = db.transaction('photos', 'readonly').objectStore('photos').openCursor();
+        req.onsuccess = function () {
+          var cur = req.result;
+          if (cur) { photos[cur.key] = cur.value; cur.continue(); } else resolve();
+        };
+        req.onerror = function () { resolve(); };
+      });
+    });
+  }
+  function savePhoto(id, dataUrl) {
+    photos[id] = dataUrl;
+    // Xin trình duyệt giữ dữ liệu lâu dài, không tự dọn khi máy đầy
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+    photoWrite(function (s) { s.put(dataUrl, id); })
+      .catch(function () { toast('⚠️ Không lưu được ảnh, máy có thể đã đầy bộ nhớ'); });
+  }
+  function deletePhoto(id) {
+    delete photos[id];
+    photoWrite(function (s) { s.delete(id); }).catch(function () {});
+  }
+
+  // Thu nhỏ ảnh còn 400×400, giữ nguyên cả món (nền trắng), nén JPEG ~25KB
+  function resizePhoto(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var size = 400;
+        var scale = size / Math.max(img.naturalWidth, img.naturalHeight);
+        var w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+        var c = document.createElement('canvas');
+        c.width = c.height = size;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.75));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Ảnh lỗi')); };
+      img.src = url;
+    });
+  }
+
+  // Ảnh nhỏ cạnh tên món. withPlaceholder: món chưa có ảnh thì hiện ô xám để thẳng hàng
+  function thumbHtml(p, withPlaceholder) {
+    if (photos[p.id]) return '<img class="thumb" alt="" src="' + photos[p.id] + '">';
+    return withPlaceholder ? '<span class="thumb thumb-empty">📦</span>' : '';
+  }
+
   // Giá sỉ: mua từ bulkMin cái trở lên thì tất cả các cái tính giá bulkPrice
   function hasBulk(p) { return p.bulkPrice > 0 && p.bulkMin >= 2; }
   function unitPrice(p, qty) { return hasBulk(p) && qty >= p.bulkMin ? p.bulkPrice : p.price; }
@@ -497,8 +617,8 @@
     var html = '<div class="sg-count">' +
       (list.length ? 'Tìm thấy ' + list.length + ' món' : 'Không có món nào khớp') + '</div>';
     list.forEach(function (p) {
-      html += '<button class="sg-item" data-id="' + p.id + '">' +
-        '<span>' + highlight(p.name, q) + '</span>' +
+      html += '<button class="sg-item" data-id="' + p.id + '">' + thumbHtml(p, true) +
+        '<span class="sg-name">' + highlight(p.name, q) + '</span>' +
         '<span class="sg-price">' + fmt(p.price) + '</span></button>';
     });
     html += '<button class="sg-item sg-new" data-new="1">➕ Thêm "' +
@@ -600,8 +720,8 @@
           : '<div class="item-unit">' + fmt(p.price) + ' / món</div>' +
             (hasBulk(p) ? '<div class="item-next">Mua từ ' + p.bulkMin + ': ' + fmt(p.bulkPrice) + ' / món</div>' : '');
         html += '<div class="item">' +
-          '<div class="item-top">' +
-            '<div style="flex:1"><div class="item-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="item-top">' + thumbHtml(p, false) +
+            '<div style="flex:1;min-width:0"><div class="item-name">' + escapeHtml(p.name) + '</div>' +
             unitHtml + '</div>' +
             '<button class="btn-remove" data-act="remove" data-id="' + c.id + '" aria-label="Bỏ món">✕</button>' +
           '</div>' +
@@ -685,7 +805,7 @@
     if (!products.length) html += '<div class="empty">Chưa có món nào.<br>Bấm "➕ Thêm món" để thêm.</div>';
     else if (!list.length) html += '<div class="empty">Không có món nào khớp.</div>';
     list.forEach(function (p) {
-      html += '<button class="pl-item" data-id="' + p.id + '">' +
+      html += '<button class="pl-item" data-id="' + p.id + '">' + thumbHtml(p, true) +
         '<div class="pl-info"><div class="pl-name">' + (q ? highlight(p.name, q) : escapeHtml(p.name)) + '</div>' +
         '<div class="pl-price">' + fmt(p.price) + '</div>' +
         (hasBulk(p) ? '<div class="pl-tiers">🏷️ Từ ' + p.bulkMin + ' cái: ' + fmt(p.bulkPrice) + '</div>' : '') +
@@ -721,7 +841,7 @@
   function untouchedSamples() {
     return products.filter(function (p) {
       var s = SAMPLE_PRODUCTS.find(function (x) { return x.id === p.id; });
-      return s && s.name === p.name && s.price === p.price && !hasBulk(p);
+      return s && s.name === p.name && s.price === p.price && !hasBulk(p) && !photos[p.id];
     });
   }
 
@@ -741,6 +861,7 @@
       var ids = samples.map(function (p) { return p.id; });
       products = products.filter(function (p) { return ids.indexOf(p.id) < 0; });
       cart = cart.filter(function (c) { return ids.indexOf(c.id) < 0; });
+      ids.forEach(function (id) { if (photos[id]) deletePhoto(id); });
       save(KEY_PRODUCTS, products);
       commitCart();
       renderProductList();
@@ -754,6 +875,45 @@
   var bulkMinIn = $('bulkMin'), bulkPriceIn = $('bulkPrice');
   var addToCartAfterSave = false;
   var editingId = null; // null = đang thêm món mới
+  var pendingPhoto;     // undefined = giữ ảnh cũ, null = bỏ ảnh, chuỗi = ảnh mới chụp
+
+  function currentPhoto() {
+    if (pendingPhoto !== undefined) return pendingPhoto;
+    return editingId !== null ? photos[editingId] || null : null;
+  }
+  function showPhotoPreview() {
+    var src = currentPhoto(), box = $('photoBox');
+    box.textContent = '';
+    if (src) {
+      var img = document.createElement('img');
+      img.alt = '';
+      img.src = src;
+      box.appendChild(img);
+    } else box.textContent = '📷';
+    $('btnPhotoDel').style.display = src ? 'block' : 'none';
+  }
+  function onPhotoPicked(e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    $('photoBox').textContent = '⏳';
+    resizePhoto(file).then(function (dataUrl) {
+      pendingPhoto = dataUrl;
+      showPhotoPreview();
+    }).catch(function () {
+      showPhotoPreview();
+      toast('Không đọc được ảnh này, thử ảnh khác');
+    });
+  }
+  function applyPhoto(id) {
+    if (pendingPhoto === null) deletePhoto(id);
+    else if (pendingPhoto) savePhoto(id, pendingPhoto);
+  }
+  $('btnPhotoCam').addEventListener('click', function () { $('photoCam').click(); });
+  $('btnPhotoPick').addEventListener('click', function () { $('photoPick').click(); });
+  $('photoCam').addEventListener('change', onPhotoPicked);
+  $('photoPick').addEventListener('change', onPhotoPicked);
+  $('btnPhotoDel').addEventListener('click', function () { pendingPhoto = null; showPhotoPreview(); });
 
   function updatePriceHint() {
     var d = digitsOnly(priceIn.value).replace(/^0+/, '');
@@ -786,6 +946,8 @@
 
   function openProductModal(product, prefillName, thenAddToCart) {
     editingId = product ? product.id : null;
+    pendingPhoto = undefined;
+    showPhotoPreview();
     addToCartAfterSave = !!thenAddToCart;
     $('addTitle').textContent = product ? '✏️ Sửa món' : '➕ Thêm món mới';
     $('btnDeleteProduct').style.display = product ? 'block' : 'none';
@@ -865,6 +1027,7 @@
       edited.name = name;
       edited.price = price;
       applyBulk(edited);
+      applyPhoto(edited.id);
       save(KEY_PRODUCTS, products);
       closeModal(addModal);
       renderCart();
@@ -876,6 +1039,7 @@
     var maxId = products.reduce(function (m, p) { return Math.max(m, p.id); }, FIRST_USER_ID - 1);
     var product = { id: maxId + 1, name: name, price: price };
     applyBulk(product);
+    applyPhoto(product.id);
     products.push(product);
     save(KEY_PRODUCTS, products);
     closeModal(addModal);
@@ -891,6 +1055,7 @@
     askConfirm('🗑️ Xóa món này?', 'Xóa "' + p.name + '" khỏi danh sách món? ' +
       'Nếu món đang có trong giỏ thì cũng bị bỏ ra.', 'Xóa món', function () {
       products = products.filter(function (x) { return x.id !== p.id; });
+      if (photos[p.id]) deletePhoto(p.id);
       cart = cart.filter(function (c) { return c.id !== p.id; });
       save(KEY_PRODUCTS, products);
       commitCart();
@@ -953,6 +1118,11 @@
   });
 
   renderCart();
+  // Ảnh đọc từ bộ nhớ hơi chậm hơn, có rồi thì vẽ lại cho hiện ảnh
+  loadAllPhotos().then(function () {
+    renderCart();
+    if (listScreen.classList.contains('open')) renderProductList();
+  }).catch(function () {});
 
   // ---------- Dùng khi mất mạng (PWA) + tự cập nhật bản mới ----------
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
