@@ -286,6 +286,20 @@
   }
   @media (min-width: 600px) { .overlay { align-items: center; } .modal { border-radius: 20px; } }
   .modal h2 { font-size: 26px; margin-bottom: 16px; }
+  /* Thanh tiêu đề có nút ✕ ở góc trái, luôn dính trên cùng khi kéo popup */
+  .modal-head {
+    position: sticky; top: -20px; z-index: 3; background: #fff;
+    display: flex; align-items: center; gap: 12px;
+    margin: -20px -16px 14px; padding: 14px 16px 12px; border-bottom: 2px solid var(--line);
+    border-radius: 20px 20px 0 0;
+  }
+  .modal-head h2 { flex: 1; min-width: 0; margin: 0; }
+  .btn-x {
+    width: 50px; height: 50px; flex-shrink: 0; border-radius: 50%;
+    background: #f3f4f6; border: 2px solid #9ca3af; color: var(--ink);
+    font-size: 26px; font-weight: 900; line-height: 1;
+  }
+  .btn-x:active { background: #e5e7eb; }
   .modal p.msg {
     font-size: 22px; line-height: 1.45; margin-bottom: 20px;
     white-space: pre-line; max-height: 50vh; overflow-y: auto;
@@ -518,7 +532,10 @@
 <!-- Popup thêm / sửa món -->
 <div class="overlay" id="addModal">
   <div class="modal" role="dialog" aria-labelledby="addTitle">
-    <h2 id="addTitle">➕ Thêm món mới</h2>
+    <div class="modal-head">
+      <button class="btn-x" id="btnCloseAdd" type="button" aria-label="Đóng">✕</button>
+      <h2 id="addTitle">Thêm món mới</h2>
+    </div>
     <div class="field">
       <label>Ảnh sản phẩm <span class="opt">(không bắt buộc)</span></label>
       <div class="photo-row">
@@ -692,7 +709,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 19; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 20; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1714,7 +1731,7 @@
     pendingPhoto = undefined;
     showPhotoPreview();
     addToCartAfterSave = !!thenAddToCart;
-    $('addTitle').textContent = product ? '✏️ Sửa món' : '➕ Thêm món mới';
+    $('addTitle').textContent = product ? 'Sửa món' : 'Thêm món mới';
     $('btnDeleteProduct').style.display = product ? 'block' : 'none';
     nameIn.value = product ? product.name : (prefillName || '');
     priceIn.value = product ? String(product.price) : '';
@@ -1852,6 +1869,7 @@
 
   $('btnOpenAdd').addEventListener('click', function () { openAddModal('', false); });
   $('btnCancelAdd').addEventListener('click', function () { closeModal(addModal); });
+  $('btnCloseAdd').addEventListener('click', function () { closeModal(addModal); });
   $('btnSaveAdd').addEventListener('click', saveProduct);
   $('btnDeleteProduct').addEventListener('click', deleteProduct);
   nameIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') priceIn.focus(); });
