@@ -523,7 +523,7 @@
     <button class="btn-head" id="btnOpenHistory"><span class="ico">📋</span>Đơn đã bán</button>
   </div>
   <div class="search-wrap">
-    <input id="search" class="big-search" type="search" placeholder="🔍 Gõ tên món..." autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+    <input id="search" class="big-search" type="search" placeholder="🔍 Tìm sản phẩm..." autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
     <button id="clearSearch" aria-label="Xóa chữ">✕</button>
     <div id="suggest" role="listbox"></div>
   </div>
@@ -569,7 +569,7 @@
       <button class="btn-backup-open" id="btnOpenBackup">💾 Sao lưu</button>
       <button class="btn-close" id="btnCloseList">✕ Đóng</button>
     </div>
-    <input id="plSearch" class="big-search" type="search" placeholder="🔍 Tìm món cần sửa..." autocomplete="off" autocorrect="off" spellcheck="false">
+    <input id="plSearch" class="big-search" type="search" placeholder="🔍 Tìm sản phẩm cần sửa..." autocomplete="off" autocorrect="off" spellcheck="false">
   </div>
   <div class="screen-body" id="plList"></div>
 </div>
@@ -765,7 +765,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 25; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 26; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1150,7 +1150,7 @@
     var total = 0, count = 0;
     if (!cart.length) {
       cartEl.innerHTML = '<div class="empty"><span class="big">🛒</span>' +
-        'Chưa có món nào.<br>Gõ tên món vào ô tìm kiếm phía trên.' +
+        'Chưa có món nào.<br>Tìm sản phẩm ở ô phía trên.' +
         '<div class="ver">Phiên bản ' + APP_VERSION + '</div></div>';
     } else {
       var html = '';
