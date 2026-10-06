@@ -295,11 +295,30 @@
     padding-top: max(10px, env(safe-area-inset-top));
   }
   .screen-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .screen-title-row h2 { flex: 1; color: #fff; font-size: 24px; }
+  .screen-title-row h2 { flex: 1; min-width: 0; color: #fff; font-size: 21px; white-space: nowrap; }
   .btn-close {
-    background: #fff; color: var(--ink); font-weight: 800; font-size: 20px;
-    min-height: 54px; padding: 0 16px; border-radius: 12px;
+    flex-shrink: 0; background: #fff; color: var(--ink); font-weight: 800; font-size: 18px;
+    min-height: 52px; padding: 0 12px; border-radius: 12px;
   }
+  .btn-backup-open {
+    flex-shrink: 0; position: relative; background: #dbeafe; color: var(--blue); font-weight: 800; font-size: 18px;
+    min-height: 52px; padding: 0 12px; border-radius: 12px;
+  }
+  /* Chấm đỏ nhắc: lâu rồi chưa sao lưu */
+  .btn-backup-open.warn::after {
+    content: ''; position: absolute; top: -4px; right: -4px; width: 16px; height: 16px;
+    border-radius: 50%; background: #ef4444; border: 2px solid #fff;
+  }
+  .backup-note { font-size: 19px; line-height: 1.45; color: var(--muted); margin-bottom: 12px; }
+  .backup-last { font-size: 19px; font-weight: 700; margin-bottom: 16px; }
+  .backup-last.warn { color: #b45309; }
+  .btn-big {
+    width: 100%; min-height: 62px; border-radius: 14px; margin-bottom: 10px;
+    font-size: 22px; font-weight: 800;
+  }
+  .btn-big.save { background: var(--green); color: #fff; }
+  .btn-big.restore { background: #fff; color: var(--blue); border: 2px solid var(--blue); }
+  .btn-big.close { background: #e5e7eb; color: var(--ink); margin-bottom: 0; }
   .screen-body {
     flex: 1; overflow-y: auto; padding: 12px;
     padding-bottom: max(24px, env(safe-area-inset-bottom));
@@ -369,7 +388,8 @@
 <div class="screen" id="listScreen">
   <div class="screen-head">
     <div class="screen-title-row">
-      <h2>✏️ Sửa giá món</h2>
+      <h2>✏️ Sửa giá</h2>
+      <button class="btn-backup-open" id="btnOpenBackup">💾 Sao lưu</button>
       <button class="btn-close" id="btnCloseList">✕ Đóng</button>
     </div>
     <input id="plSearch" class="big-search" type="search" placeholder="🔍 Tìm món cần sửa..." autocomplete="off" autocorrect="off" spellcheck="false">
@@ -464,6 +484,19 @@
   </div>
 </div>
 
+<!-- Popup sao lưu / khôi phục -->
+<div class="overlay" id="backupModal">
+  <div class="modal" role="dialog" aria-labelledby="backupTitle">
+    <h2 id="backupTitle">💾 Sao lưu dữ liệu</h2>
+    <p class="backup-note">Lưu toàn bộ món, giá và ảnh thành 1 file. Chọn <b>Lưu vào Tệp → iCloud Drive</b> để file tự có trên máy tính, hoặc gửi qua Zalo. Khi lỡ xóa app hay đổi điện thoại, bấm Khôi phục và chọn file đó.</p>
+    <div class="backup-last" id="backupLast"></div>
+    <button class="btn-big save" id="btnBackup">📤 Sao lưu ngay</button>
+    <button class="btn-big restore" id="btnRestore">📥 Khôi phục từ file</button>
+    <button class="btn-big close" id="btnCloseBackup">Đóng</button>
+    <input class="file-hidden" id="restoreInput" type="file" accept=".json,application/json,text/plain" tabindex="-1">
+  </div>
+</div>
+
 <!-- Popup xác nhận -->
 <div class="overlay" id="confirmModal">
   <div class="modal" role="alertdialog">
@@ -482,7 +515,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 13; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 14; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -981,6 +1014,7 @@
     listScreen.classList.add('open');
     plListEl.scrollTop = 0;
     document.body.style.overflow = 'hidden';
+    updateBackupBadge();
   }
   function closeListScreen() {
     listScreen.classList.remove('open');
@@ -1028,6 +1062,154 @@
       toast('Đã xóa ' + ids.length + ' món mẫu');
     });
   }
+
+  // ---------- Sao lưu / khôi phục ----------
+  // File sao lưu: { app: 'taphoa', version: 1, createdAt, products: [...], photos: { id: dataURL } }
+  var KEY_LAST_BACKUP = 'taphoa_last_backup';
+  var BACKUP_REMIND_DAYS = 7;
+  var backupModal = $('backupModal');
+
+  function lastBackup() {
+    try { var v = localStorage.getItem(KEY_LAST_BACKUP); return v ? new Date(v) : null; } catch (e) { return null; }
+  }
+  function fmtDateTime(d) {
+    var two = function (n) { return (n < 10 ? '0' : '') + n; };
+    return two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + d.getFullYear() +
+      ' lúc ' + two(d.getHours()) + ':' + two(d.getMinutes());
+  }
+  function needsBackup() {
+    var last = lastBackup();
+    if (!products.length) return false;
+    return !last || (Date.now() - last.getTime()) > BACKUP_REMIND_DAYS * 86400000;
+  }
+  function updateBackupBadge() {
+    $('btnOpenBackup').classList.toggle('warn', needsBackup());
+  }
+  function openBackupModal() {
+    var last = lastBackup(), el = $('backupLast');
+    el.textContent = last ? '✅ Lần sao lưu gần nhất: ' + fmtDateTime(last) : '⚠️ Chưa sao lưu lần nào';
+    el.classList.toggle('warn', needsBackup());
+    openModal(backupModal);
+  }
+  function markBackedUp() {
+    try { localStorage.setItem(KEY_LAST_BACKUP, new Date().toISOString()); } catch (e) {}
+    updateBackupBadge();
+    closeModal(backupModal);
+    toast('✅ Đã sao lưu ' + products.length + ' món');
+  }
+
+  function backupFileName() {
+    var d = new Date(), two = function (n) { return (n < 10 ? '0' : '') + n; };
+    return 'taphoa-saoluu-' + d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + '.json';
+  }
+  function buildBackupJson() {
+    var data = { app: 'taphoa', version: 1, createdAt: new Date().toISOString(), products: products, photos: {} };
+    products.forEach(function (p) { if (photos[p.id]) data.photos[p.id] = photos[p.id]; });
+    return JSON.stringify(data);
+  }
+  // Tải file về máy (dùng khi trình duyệt không có bảng chia sẻ)
+  function downloadFile(file) {
+    var url = URL.createObjectURL(file);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    markBackedUp();
+  }
+  function exportBackup() {
+    if (!products.length) { toast('Chưa có món nào để sao lưu'); return; }
+    var json = buildBackupJson(), name = backupFileName();
+    var file = new File([json], name, { type: 'application/json' });
+    // Một số trình duyệt chỉ cho chia sẻ file chữ thường: thử thêm bản .txt
+    var txt = new File([json], name.replace(/\.json$/, '.txt'), { type: 'text/plain' });
+    var shareFile = navigator.canShare && (navigator.canShare({ files: [file] }) ? file :
+      navigator.canShare({ files: [txt] }) ? txt : null);
+    if (!shareFile) { downloadFile(file); return; }
+    // iPhone: mở bảng chia sẻ để Lưu vào Tệp / iCloud Drive / Zalo / AirDrop
+    navigator.share({ files: [shareFile], title: 'Sao lưu Tạp Hóa' })
+      .then(markBackedUp)
+      .catch(function (err) { if (!err || err.name !== 'AbortError') downloadFile(file); });
+  }
+
+  // Chỉ nhận đúng các trường của món hàng, bỏ dữ liệu lạ trong file
+  function cleanProduct(p) {
+    if (!p || typeof p.id !== 'number' || typeof p.name !== 'string' || !p.name.trim() ||
+        typeof p.price !== 'number' || p.price <= 0) return null;
+    var out = { id: p.id, name: p.name.trim(), price: Math.round(p.price) };
+    if (typeof p.unit === 'string' && p.unit.trim()) out.unit = p.unit.trim();
+    if (Array.isArray(p.units)) {
+      var units = p.units.filter(function (u) {
+        return u && typeof u.name === 'string' && u.name.trim() && typeof u.price === 'number' && u.price > 0;
+      }).map(function (u) { return { name: u.name.trim(), price: Math.round(u.price) }; });
+      if (units.length) out.units = units;
+    }
+    if (p.bulkMin >= 2 && p.bulkPrice > 0) { out.bulkMin = Math.round(p.bulkMin); out.bulkPrice = Math.round(p.bulkPrice); }
+    return out;
+  }
+  function replaceAllPhotos(newPhotos) {
+    photos = {};
+    Object.keys(newPhotos).forEach(function (id) { photos[id] = newPhotos[id]; });
+    return photoWrite(function (store) {
+      store.clear();
+      Object.keys(newPhotos).forEach(function (id) { store.put(newPhotos[id], Number(id)); });
+    });
+  }
+  function importBackup(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(reader.result); } catch (e) { data = null; }
+      if (!data || data.app !== 'taphoa' || !Array.isArray(data.products)) {
+        toast('⚠️ File này không phải file sao lưu của app');
+        return;
+      }
+      var seen = {};
+      var list = data.products.map(cleanProduct).filter(function (p) {
+        if (!p || seen[p.id]) return false;
+        seen[p.id] = true;
+        return true;
+      });
+      var newPhotos = {};
+      Object.keys(data.photos || {}).forEach(function (id) {
+        var v = data.photos[id];
+        if (seen[id] && typeof v === 'string' && v.indexOf('data:image/') === 0) newPhotos[id] = v;
+      });
+      var when = data.createdAt && !isNaN(new Date(data.createdAt)) ? fmtDateTime(new Date(data.createdAt)) : 'không rõ';
+      askConfirm('📥 Khôi phục dữ liệu?',
+        'File sao lưu ngày ' + when + ':\n• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n\n' +
+        'Danh sách hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.',
+        'Khôi phục', function () {
+          products = list;
+          save(KEY_PRODUCTS, products);
+          pruneCart();
+          commitCart();
+          closeModal(backupModal);
+          replaceAllPhotos(newPhotos)
+            .catch(function () { toast('⚠️ Không lưu được ảnh, máy có thể đã đầy bộ nhớ'); })
+            .then(function () {
+              renderCart();
+              if (listScreen.classList.contains('open')) renderProductList();
+            });
+          if (listScreen.classList.contains('open')) renderProductList();
+          toast('✅ Đã khôi phục ' + list.length + ' món');
+        });
+    };
+    reader.onerror = function () { toast('⚠️ Không đọc được file'); };
+    reader.readAsText(file);
+  }
+
+  $('btnOpenBackup').addEventListener('click', openBackupModal);
+  $('btnCloseBackup').addEventListener('click', function () { closeModal(backupModal); });
+  $('btnBackup').addEventListener('click', exportBackup);
+  $('btnRestore').addEventListener('click', function () { $('restoreInput').click(); });
+  $('restoreInput').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (file) importBackup(file);
+  });
 
   // ---------- Thêm / sửa món ----------
   var addModal = $('addModal');
