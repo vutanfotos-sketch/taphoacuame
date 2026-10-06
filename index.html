@@ -122,8 +122,8 @@
   .sg-row { display: flex; align-items: center; border-bottom: 2px solid var(--line); }
   .sg-row .sg-item { flex: 1; min-width: 0; border-bottom: none; }
   .sg-add {
-    flex-shrink: 0; width: 60px; height: 60px; margin-right: 12px; border-radius: 50%;
-    background: var(--green); color: #fff; font-size: 40px; font-weight: 900; line-height: 1;
+    flex-shrink: 0; width: 44px; height: 44px; margin-right: 14px; border-radius: 50%;
+    background: var(--green); color: #fff; font-size: 28px; font-weight: 900; line-height: 1;
     display: flex; align-items: center; justify-content: center;
   }
   .sg-add:active, .sg-unit:active { transform: scale(.92); }
@@ -131,13 +131,13 @@
   .sg-group .sg-item { border-bottom: none; }
   .sg-units { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 12px 12px; }
   .sg-unit {
-    min-height: 56px; padding: 4px 14px; border-radius: 12px;
+    min-height: 48px; padding: 4px 12px; border-radius: 10px;
     background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd;
-    font-size: 20px; font-weight: 800; line-height: 1.2;
+    font-size: 18px; font-weight: 800; line-height: 1.2;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
   .sg-unit:active { background: #dbeafe; }
-  .sg-unit small { font-size: 16px; font-weight: 700; color: var(--red); }
+  .sg-unit small { font-size: 15px; font-weight: 700; color: var(--red); }
   .item-unit.other { color: var(--blue); font-weight: 800; }
   .pl-unit { font-size: 18px; font-weight: 700; color: var(--blue); margin-top: 2px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -154,15 +154,15 @@
   .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
   .qty { display: flex; align-items: center; gap: 6px; }
   .btn-qty {
-    width: 52px; height: 52px; border-radius: 12px;
-    font-size: 30px; font-weight: 900; color: #fff; line-height: 1;
+    width: 44px; height: 44px; border-radius: 10px;
+    font-size: 24px; font-weight: 900; color: #fff; line-height: 1;
   }
   .btn-minus { background: #4b5563; }
   .btn-plus { background: var(--green); }
   .qty-num {
-    min-width: 52px; height: 52px; padding: 0 6px; border-radius: 12px;
-    background: #fff; border: 3px solid var(--ink);
-    font-size: 24px; font-weight: 900; color: var(--ink);
+    min-width: 48px; height: 44px; padding: 0 6px; border-radius: 10px;
+    background: #fff; border: 2px solid var(--ink);
+    font-size: 21px; font-weight: 900; color: var(--ink);
   }
   .item-sub { font-size: 22px; font-weight: 900; color: var(--red); text-align: right; white-space: nowrap; }
 
@@ -482,7 +482,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 12; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 13; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
