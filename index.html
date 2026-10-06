@@ -86,6 +86,7 @@
     text-align: center; color: var(--muted); padding: 40px 16px; font-size: 22px; line-height: 1.5;
   }
   .empty .big { font-size: 56px; display: block; margin-bottom: 8px; }
+  .empty .ver { margin-top: 24px; font-size: 16px; color: #6b7280; }
   .item {
     background: var(--card); border-radius: 14px; padding: 12px 12px 14px;
     margin-bottom: 12px; border: 2px solid var(--line);
@@ -319,6 +320,7 @@
 (function () {
   'use strict';
 
+  var APP_VERSION = 3; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -516,7 +518,8 @@
     var total = 0, count = 0;
     if (!cart.length) {
       cartEl.innerHTML = '<div class="empty"><span class="big">🛒</span>' +
-        'Chưa có món nào.<br>Gõ tên món vào ô tìm kiếm phía trên.</div>';
+        'Chưa có món nào.<br>Gõ tên món vào ô tìm kiếm phía trên.' +
+        '<div class="ver">Phiên bản ' + APP_VERSION + '</div></div>';
     } else {
       var html = '';
       cart.forEach(function (c) {
@@ -562,7 +565,15 @@
 
   // ---------- Popup chung ----------
   function openModal(el) { el.classList.add('open'); }
-  function closeModal(el) { el.classList.remove('open'); }
+  function closeModal(el) { el.classList.remove('open'); reloadIfIdle(); }
+
+  // Có bản mới thì tải lại, nhưng chờ đến khi không còn popup đang nhập dở
+  var pendingReload = false;
+  function reloadIfIdle() {
+    if (!pendingReload || document.querySelector('.overlay.open, .screen.open')) return;
+    pendingReload = false;
+    location.reload();
+  }
   document.querySelectorAll('.overlay').forEach(function (ov) {
     ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(ov); });
   });
@@ -593,7 +604,7 @@
     var list = q ? searchProducts(q) : products.slice().sort(function (a, b) {
       return a.name.localeCompare(b.name, 'vi');
     });
-    var html = '<div class="pl-tip">' + products.length + ' món · Chạm vào món để sửa giá</div>';
+    var html = '<div class="pl-tip">' + products.length + ' món · Chạm vào món để sửa giá · Phiên bản ' + APP_VERSION + '</div>';
     if (!list.length) html += '<div class="empty">Không có món nào khớp.</div>';
     list.forEach(function (p) {
       html += '<button class="pl-item" data-id="' + p.id + '">' +
@@ -614,6 +625,7 @@
   function closeListScreen() {
     listScreen.classList.remove('open');
     document.body.style.overflow = '';
+    reloadIfIdle();
   }
 
   $('btnOpenList').addEventListener('click', openListScreen);
@@ -784,9 +796,20 @@
 
   renderCart();
 
-  // ---------- Dùng khi mất mạng (PWA) ----------
+  // ---------- Dùng khi mất mạng (PWA) + tự cập nhật bản mới ----------
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController) { hadController = true; return; } // lần cài đầu, không cần tải lại
+      pendingReload = true;
+      reloadIfIdle();
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+      // Mở lại app từ màn hình chính (không tải lại trang) thì cũng kiểm tra bản mới
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') reg.update().catch(function () {});
+      });
+    }).catch(function () {});
   }
 })();
 </script>
