@@ -925,7 +925,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 34; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 35; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1393,10 +1393,41 @@
 
   // ---------- Popup chung ----------
   function openModal(el) {
+    if (!el.classList.contains('open')) uiPush(el.id);
     el.classList.add('open');
     $('toast').classList.remove('show');   // thông báo cũ không che nút trong popup
   }
-  function closeModal(el) { el.classList.remove('open'); reloadIfIdle(); }
+  // fromBack = đóng do bấm nút Quay lại của điện thoại (lịch sử trình duyệt đã lùi sẵn)
+  function closeModal(el, fromBack) {
+    if (!fromBack) uiPop(el.id);
+    el.classList.remove('open');
+    reloadIfIdle();
+  }
+
+  // ---------- Nút Quay lại (◁) của Android ----------
+  // Mỗi popup/màn hình mở ra thêm một bước vào lịch sử trình duyệt. Bấm Quay lại thì đóng cái trên cùng
+  // thay vì thoát app; chỉ khi không còn gì mở mới thoát. Đếm số bước nên đóng/mở xen kẽ vẫn khớp.
+  var uiStack = [], ignorePop = 0;
+  function uiPush(id) {
+    if (!id || uiStack.indexOf(id) >= 0) return;
+    uiStack.push(id);
+    try { history.pushState({ taphoaUi: uiStack.length }, ''); } catch (e) {}
+  }
+  function uiPop(id) {
+    var i = uiStack.indexOf(id);
+    if (i < 0) return;
+    uiStack.splice(i, 1);
+    ignorePop++;   // lần popstate sắp tới là do mình lùi, không phải người dùng bấm
+    try { history.back(); } catch (e) { ignorePop--; }
+  }
+  window.addEventListener('popstate', function () {
+    if (ignorePop > 0) { ignorePop--; return; }
+    var id = uiStack.pop();
+    if (!id) return;
+    if (id === 'listScreen') closeListScreen(true);
+    else if (id === 'historyScreen') closeHistory(true);
+    else if ($(id)) closeModal($(id), true);
+  });
 
   // Có bản mới thì tải lại, nhưng chờ đến khi không còn popup đang nhập dở
   var pendingReload = false;
@@ -1465,12 +1496,14 @@
   function openListScreen() {
     plSearchEl.value = '';
     renderProductList();
+    if (!listScreen.classList.contains('open')) uiPush('listScreen');
     listScreen.classList.add('open');
     plListEl.scrollTop = 0;
     document.body.style.overflow = 'hidden';
     updateBackupBadge();
   }
-  function closeListScreen() {
+  function closeListScreen(fromBack) {
+    if (fromBack !== true) uiPop('listScreen');
     listScreen.classList.remove('open');
     document.body.style.overflow = '';
     reloadIfIdle();
@@ -2826,11 +2859,13 @@
     histMode = 'day';
     $('tabDebt').style.display = settings().allowDebt ? '' : 'none';
     showHistory();
+    if (!historyScreen.classList.contains('open')) uiPush('historyScreen');
     historyScreen.classList.add('open');
     historyList.scrollTop = 0;
     document.body.style.overflow = 'hidden';
   }
-  function closeHistory() {
+  function closeHistory(fromBack) {
+    if (fromBack !== true) uiPop('historyScreen');
     historyScreen.classList.remove('open');
     document.body.style.overflow = '';
     reloadIfIdle();
