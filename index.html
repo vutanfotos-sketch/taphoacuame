@@ -255,6 +255,13 @@
   .btn-reopen { background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd; }
   .btn-del-order { background: #fff; color: var(--red); border: 2px solid #fca5a5; }
   .hist-note { text-align: center; font-size: 16px; color: var(--muted); margin: 14px 0 6px; }
+  .keep-box {
+    background: #fff; border: 2px solid var(--line); border-radius: 14px;
+    padding: 12px; margin-top: 16px;
+  }
+  .keep-box .pay-label { font-size: 18px; }
+  .keep-box .chip { color: var(--ink); border-color: #9ca3af; }
+  .keep-box .chip.on { background: #0f766e; border-color: #0f766e; color: #fff; }
 
   /* ---------- Modal ---------- */
   .overlay {
@@ -658,7 +665,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 17; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 18; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1955,7 +1962,18 @@
 
   // ---------- Lịch sử đơn đã bán (IndexedDB, giữ 90 ngày) ----------
   // Đơn: { ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change }
-  var ORDER_KEEP_DAYS = 90;
+  // Thời gian giữ lịch sử do chủ tiệm chọn (mặc định 1 năm)
+  var KEY_KEEP_DAYS = 'taphoa_order_keep_days';
+  var KEEP_OPTIONS = [{ days: 90, label: '3 tháng' }, { days: 180, label: '6 tháng' },
+    { days: 365, label: '1 năm' }, { days: 730, label: '2 năm' }];
+  function keepDays() {
+    var v = Number(getStored(KEY_KEEP_DAYS));
+    return KEEP_OPTIONS.some(function (o) { return o.days === v; }) ? v : 365;
+  }
+  function keepLabel(days) {
+    var o = KEEP_OPTIONS.find(function (x) { return x.days === days; });
+    return o ? o.label : days + ' ngày';
+  }
   var DAY_MS = 86400000;
 
   function ordersStore(mode, fn) {
@@ -1984,7 +2002,7 @@
   }
   // Xóa đơn quá 90 ngày cho máy khỏi đầy
   function purgeOldOrders() {
-    var cutoff = Date.now() - ORDER_KEEP_DAYS * DAY_MS;
+    var cutoff = Date.now() - keepDays() * DAY_MS;
     return ordersStore('readwrite', function (st) { st.delete(IDBKeyRange.upperBound(cutoff)); });
   }
 
@@ -2007,7 +2025,7 @@
   function renderHistory() {
     $('dayLabel').innerHTML = dayLabel(histDay);
     $('btnDayNext').disabled = histDay === 0;
-    $('btnDayPrev').disabled = histDay >= ORDER_KEEP_DAYS - 1;
+    $('btnDayPrev').disabled = histDay >= keepDays() - 1;
     var from = dayStart(histDay).getTime(), to = from + DAY_MS;
     historyList.innerHTML = '<div class="empty">⏳ Đang tải…</div>';
     getOrders(from, to).then(function (list) {
@@ -2018,7 +2036,8 @@
       shownOrders.forEach(function (o) {
         var t = new Date(o.ts);
         html += '<div class="order">' +
-          '<div class="order-top"><span class="order-time">🕒 ' + two(t.getHours()) + ':' + two(t.getMinutes()) + '</span>' +
+          '<div class="order-top"><span class="order-time">🕒 ' + two(t.getHours()) + ':' + two(t.getMinutes()) +
+          ' · ' + two(t.getDate()) + '/' + two(t.getMonth() + 1) + '/' + t.getFullYear() + '</span>' +
           '<b class="order-total">' + fmt(o.total) + '</b></div>' +
           '<div class="order-items">' + o.items.map(function (it) {
             return escapeHtml(it.qty + ' ' + it.unitName + ' ' + it.name) + ' <span style="color:var(--muted)">(' + fmt(it.sub) + ')</span>';
@@ -2029,7 +2048,12 @@
             '<button class="btn-del-order" data-act="del" data-ts="' + o.ts + '">🗑️ Xóa đơn</button>' +
           '</div></div>';
       });
-      html += '<div class="hist-note">Đơn được lưu ' + ORDER_KEEP_DAYS + ' ngày, sau đó tự xóa.</div>';
+      var keep = keepDays();
+      html += '<div class="keep-box"><span class="pay-label">Giữ lịch sử đơn trong:</span><div class="chips">' +
+        KEEP_OPTIONS.map(function (o) {
+          return '<button class="chip' + (o.days === keep ? ' on' : '') + '" type="button" data-keep="' + o.days + '">' + o.label + '</button>';
+        }).join('') + '</div></div>' +
+        '<div class="hist-note">Đơn cũ hơn ' + keepLabel(keep) + ' sẽ tự xóa.</div>';
       historyList.innerHTML = html;
     }).catch(function () {
       historyList.innerHTML = '<div class="empty">⚠️ Không đọc được lịch sử đơn.</div>';
@@ -2083,7 +2107,24 @@
   $('btnCloseHistory').addEventListener('click', closeHistory);
   $('btnDayPrev').addEventListener('click', function () { histDay++; renderHistory(); });
   $('btnDayNext').addEventListener('click', function () { if (histDay > 0) { histDay--; renderHistory(); } });
+  // Đổi thời gian giữ lịch sử; rút ngắn thì hỏi lại vì đơn cũ sẽ bị xóa ngay
+  function setKeepDays(days) {
+    var old = keepDays();
+    if (days === old) return;
+    function apply() {
+      try { localStorage.setItem(KEY_KEEP_DAYS, String(days)); } catch (e) {}
+      if (histDay >= days) histDay = 0;
+      purgeOldOrders().catch(function () {}).then(renderHistory);
+      toast('Lịch sử đơn sẽ được giữ ' + keepLabel(days));
+    }
+    if (days > old) { apply(); return; }
+    askConfirm('Giữ lịch sử ' + keepLabel(days) + '?',
+      'Các đơn cũ hơn ' + keepLabel(days) + ' sẽ bị xóa ngay và không lấy lại được.', 'Đồng ý', apply);
+  }
+
   historyList.addEventListener('click', function (e) {
+    var keepBtn = e.target.closest('button[data-keep]');
+    if (keepBtn) { setKeepDays(Number(keepBtn.dataset.keep)); return; }
     var btn = e.target.closest('button[data-act]');
     if (!btn) return;
     var o = shownOrders.find(function (x) { return x.ts === Number(btn.dataset.ts); });
