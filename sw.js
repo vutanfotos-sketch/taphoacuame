@@ -1,6 +1,6 @@
 // Lưu sẵn app vào máy để mở được khi mất mạng.
 // Mỗi lần sửa app, tăng số phiên bản này (và APP_VERSION trong index.html).
-var CACHE = 'taphoa-v3';
+var CACHE = 'taphoa-v4';
 var FILES = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
