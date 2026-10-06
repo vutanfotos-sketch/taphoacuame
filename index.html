@@ -95,7 +95,7 @@
   .sg-count { padding: 8px 16px; font-size: 17px; color: var(--muted); background: #f9fafb; border-bottom: 2px solid var(--line); }
 
   /* ---------- Cart ---------- */
-  main { padding: 12px 12px 200px; }
+  main { padding: 12px 12px 140px; }
   .empty {
     text-align: center; color: var(--muted); padding: 40px 16px; font-size: 22px; line-height: 1.5;
   }
@@ -159,18 +159,26 @@
   /* ---------- Footer ---------- */
   footer {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+    display: flex; align-items: center; gap: 12px;
     background: #fff; border-top: 4px solid var(--red);
     padding: 10px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom));
     box-shadow: 0 -4px 12px rgba(0,0,0,.15);
   }
-  .total-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-  .total-label { font-size: 22px; font-weight: 800; }
-  #total { font-size: 42px; font-weight: 900; color: var(--red); line-height: 1.1; }
-  #itemCount { font-size: 17px; color: var(--muted); margin-bottom: 8px; }
+  /* Nút đơn mới: nhỏ, góc trái, màu nhạt để khỏi bấm nhầm */
   #btnNewOrder {
-    width: 100%; min-height: 60px; border-radius: 14px;
-    background: var(--ink); color: #fff; font-size: 22px; font-weight: 800;
+    flex-shrink: 0; width: 92px; min-height: 64px; border-radius: 12px;
+    background: #f3f4f6; color: var(--muted); border: 2px solid #9ca3af;
+    font-size: 16px; font-weight: 800; line-height: 1.2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   }
+  #btnNewOrder .ico { font-size: 22px; }
+  .total-box { flex: 1; min-width: 0; text-align: right; }
+  .total-label { font-size: 18px; font-weight: 800; }
+  #total {
+    display: block; font-size: clamp(28px, 10vw, 42px); font-weight: 900;
+    color: var(--red); line-height: 1.1; white-space: nowrap;
+  }
+  #itemCount { font-size: 15px; color: var(--muted); }
 
   /* ---------- Modal ---------- */
   .overlay {
@@ -314,7 +322,7 @@
 
   /* ---------- Toast ---------- */
   #toast {
-    position: fixed; left: 50%; bottom: 190px; transform: translateX(-50%);
+    position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%);
     z-index: 60; background: var(--ink); color: #fff; padding: 14px 20px;
     border-radius: 12px; font-size: 20px; font-weight: 700; max-width: 90vw; text-align: center;
     opacity: 0; pointer-events: none; transition: opacity .2s;
@@ -339,12 +347,12 @@
 <main id="cart"></main>
 
 <footer>
-  <div class="total-row">
-    <span class="total-label">Tổng cộng:</span>
+  <button id="btnNewOrder" aria-label="Xóa và tạo đơn mới"><span class="ico">🗑️</span>Đơn mới</button>
+  <div class="total-box">
+    <span class="total-label">Tổng cộng</span>
     <span id="total">0đ</span>
+    <div id="itemCount">Chưa có món nào</div>
   </div>
-  <div id="itemCount">Chưa có món nào</div>
-  <button id="btnNewOrder">🗑️ Xóa &amp; Tạo đơn mới</button>
 </footer>
 
 <!-- Màn hình sửa giá -->
@@ -464,7 +472,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 10; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 11; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
