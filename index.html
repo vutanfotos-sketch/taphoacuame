@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b91c1c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tạp Hóa">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Máy Tính Tiền</title>
+<style>
+  :root {
+    --red: #b91c1c;
+    --red-dark: #7f1d1d;
+    --green: #15803d;
+    --blue: #1d4ed8;
+    --ink: #111827;
+    --muted: #374151;
+    --line: #d1d5db;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 20px;
+    color: var(--ink);
+    background: var(--bg);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; cursor: pointer; border: none; touch-action: manipulation; }
+  input { font: inherit; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--red);
+    padding: 10px 12px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  }
+  .head-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .head-row h1 { flex: 1; color: #fff; font-size: 24px; font-weight: 800; }
+  .btn-add-new {
+    background: #fff; color: var(--red); font-weight: 800; font-size: 19px;
+    min-height: 52px; padding: 0 14px; border-radius: 12px;
+  }
+  .search-wrap { position: relative; }
+  #search {
+    width: 100%; min-height: 64px; padding: 0 56px 0 16px;
+    font-size: 24px; border: 3px solid #fff; border-radius: 14px;
+    background: #fff; color: var(--ink); outline: none;
+  }
+  #search:focus { border-color: #fde047; }
+  #search::placeholder { color: #6b7280; }
+  #search::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+  #clearSearch {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 52px; height: 52px; border-radius: 10px;
+    background: #e5e7eb; color: var(--ink); font-size: 26px; font-weight: 800;
+    display: none;
+  }
+  #suggest {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+    background: #fff; border-radius: 14px; border: 3px solid var(--ink);
+    max-height: 60vh; overflow-y: auto; display: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .sg-item {
+    width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    min-height: 68px; padding: 10px 16px; background: #fff; text-align: left;
+    border-bottom: 2px solid var(--line); font-size: 22px; color: var(--ink);
+  }
+  .sg-item:active { background: #fef3c7; }
+  .sg-item .sg-price { font-weight: 800; color: var(--red); white-space: nowrap; }
+  .sg-item mark { background: #fde047; color: inherit; border-radius: 3px; }
+  .sg-new { color: var(--blue); font-weight: 800; justify-content: center; }
+  .sg-count { padding: 8px 16px; font-size: 17px; color: var(--muted); background: #f9fafb; border-bottom: 2px solid var(--line); }
+
+  /* ---------- Cart ---------- */
+  main { padding: 12px 12px 200px; }
+  .empty {
+    text-align: center; color: var(--muted); padding: 40px 16px; font-size: 22px; line-height: 1.5;
+  }
+  .empty .big { font-size: 56px; display: block; margin-bottom: 8px; }
+  .item {
+    background: var(--card); border-radius: 14px; padding: 12px 12px 14px;
+    margin-bottom: 12px; border: 2px solid var(--line);
+  }
+  .item-top { display: flex; gap: 10px; align-items: flex-start; }
+  .item-name { flex: 1; font-size: 24px; font-weight: 800; line-height: 1.25; word-break: break-word; }
+  .item-unit { color: var(--muted); font-size: 19px; margin-top: 2px; }
+  .btn-remove {
+    width: 52px; height: 52px; flex-shrink: 0; border-radius: 12px;
+    background: #fee2e2; color: var(--red-dark); font-size: 26px; font-weight: 900;
+    border: 2px solid #fca5a5;
+  }
+  .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .qty { display: flex; align-items: center; gap: 8px; }
+  .btn-qty {
+    width: 64px; height: 64px; border-radius: 14px;
+    font-size: 36px; font-weight: 900; color: #fff; line-height: 1;
+  }
+  .btn-minus { background: #4b5563; }
+  .btn-plus { background: var(--green); }
+  .qty-num {
+    min-width: 64px; height: 64px; padding: 0 6px; border-radius: 12px;
+    background: #fff; border: 3px solid var(--ink);
+    font-size: 30px; font-weight: 900; color: var(--ink);
+  }
+  .item-sub { font-size: 24px; font-weight: 900; color: var(--red); text-align: right; white-space: nowrap; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+    background: #fff; border-top: 4px solid var(--red);
+    padding: 10px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 12px rgba(0,0,0,.15);
+  }
+  .total-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .total-label { font-size: 22px; font-weight: 800; }
+  #total { font-size: 42px; font-weight: 900; color: var(--red); line-height: 1.1; }
+  #itemCount { font-size: 17px; color: var(--muted); margin-bottom: 8px; }
+  #btnNewOrder {
+    width: 100%; min-height: 60px; border-radius: 14px;
+    background: var(--ink); color: #fff; font-size: 22px; font-weight: 800;
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6);
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    width: 100%; max-width: 520px; background: #fff;
+    border-radius: 20px 20px 0 0; padding: 20px 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    max-height: 92vh; overflow-y: auto;
+  }
+  @media (min-width: 600px) { .overlay { align-items: center; } .modal { border-radius: 20px; } }
+  .modal h2 { font-size: 26px; margin-bottom: 16px; }
+  .modal p.msg { font-size: 22px; line-height: 1.45; margin-bottom: 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-weight: 800; margin-bottom: 6px; font-size: 21px; }
+  .field input {
+    width: 100%; min-height: 62px; padding: 0 14px; font-size: 26px;
+    border: 3px solid #6b7280; border-radius: 12px; outline: none;
+  }
+  .field input:focus { border-color: var(--blue); }
+  .field input.invalid { border-color: var(--red); }
+  .price-line { display: flex; gap: 8px; }
+  .price-line input { flex: 1; min-width: 0; }
+  .btn-000 {
+    min-width: 84px; border-radius: 12px; background: #e5e7eb; color: var(--ink);
+    font-size: 24px; font-weight: 800; border: 2px solid #9ca3af;
+  }
+  .hint { margin-top: 6px; font-size: 20px; color: var(--muted); }
+  .hint b { color: var(--red); font-size: 22px; }
+  .error { margin-top: 6px; font-size: 19px; color: var(--red); font-weight: 700; min-height: 0; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .modal-actions button { flex: 1; min-height: 62px; border-radius: 14px; font-size: 22px; font-weight: 800; }
+  .btn-cancel { background: #e5e7eb; color: var(--ink); }
+  .btn-ok { background: var(--green); color: #fff; }
+  .btn-danger { background: var(--red); color: #fff; }
+
+  /* ---------- Toast ---------- */
+  #toast {
+    position: fixed; left: 50%; bottom: 190px; transform: translateX(-50%);
+    z-index: 60; background: var(--ink); color: #fff; padding: 14px 20px;
+    border-radius: 12px; font-size: 20px; font-weight: 700; max-width: 90vw; text-align: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <h1>🧾 Tính Tiền</h1>
+    <button class="btn-add-new" id="btnOpenAdd">➕ Thêm món mới</button>
+  </div>
+  <div class="search-wrap">
+    <input id="search" type="search" placeholder="🔍 Gõ tên món..." autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+    <button id="clearSearch" aria-label="Xóa chữ">✕</button>
+    <div id="suggest" role="listbox"></div>
+  </div>
+</header>
+
+<main id="cart"></main>
+
+<footer>
+  <div class="total-row">
+    <span class="total-label">Tổng cộng:</span>
+    <span id="total">0đ</span>
+  </div>
+  <div id="itemCount">Chưa có món nào</div>
+  <button id="btnNewOrder">🗑️ Xóa &amp; Tạo đơn mới</button>
+</footer>
+
+<!-- Popup thêm món mới -->
+<div class="overlay" id="addModal">
+  <div class="modal" role="dialog" aria-labelledby="addTitle">
+    <h2 id="addTitle">➕ Thêm món mới</h2>
+    <div class="field">
+      <label for="newName">Tên sản phẩm</label>
+      <input id="newName" type="text" autocomplete="off" placeholder="Ví dụ: Bánh mì sandwich">
+      <div class="error" id="nameError"></div>
+    </div>
+    <div class="field">
+      <label for="newPrice">Giá tiền (đồng)</label>
+      <div class="price-line">
+        <input id="newPrice" type="text" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 15.000">
+        <button class="btn-000" id="btn000" type="button">000</button>
+      </div>
+      <div class="hint" id="priceHint"></div>
+      <div class="error" id="priceError"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelAdd">Hủy</button>
+      <button class="btn-ok" id="btnSaveAdd">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup nhập số lượng -->
+<div class="overlay" id="qtyModal">
+  <div class="modal" role="dialog" aria-labelledby="qtyTitle">
+    <h2 id="qtyTitle">Nhập số lượng</h2>
+    <div class="field">
+      <label for="qtyInput" id="qtyLabel"></label>
+      <input id="qtyInput" type="text" inputmode="numeric" autocomplete="off">
+      <div class="hint" id="qtyHint"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelQty">Hủy</button>
+      <button class="btn-ok" id="btnSaveQty">✔ Xong</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup xác nhận -->
+<div class="overlay" id="confirmModal">
+  <div class="modal" role="alertdialog">
+    <h2 id="confirmTitle"></h2>
+    <p class="msg" id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnConfirmNo">Không</button>
+      <button class="btn-danger" id="btnConfirmYes">Đồng ý</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var KEY_PRODUCTS = 'taphoa_products';
+  var KEY_CART = 'taphoa_cart';
+
+  var DEFAULT_PRODUCTS = [
+    { id: 1,  name: 'Mì Hảo Hảo (gói)',            price: 4500 },
+    { id: 2,  name: 'Nước mắm Nam Ngư 500ml',      price: 38000 },
+    { id: 3,  name: 'Dầu ăn Simply 1 lít',         price: 62000 },
+    { id: 4,  name: 'Đường trắng 1kg',             price: 25000 },
+    { id: 5,  name: 'Muối i-ốt (gói)',             price: 6000 },
+    { id: 6,  name: 'Bột ngọt Ajinomoto 400g',     price: 32000 },
+    { id: 7,  name: 'Gạo ST25 1kg',                price: 35000 },
+    { id: 8,  name: 'Trứng gà (1 quả)',            price: 3500 },
+    { id: 9,  name: 'Sữa tươi Vinamilk 180ml',     price: 8000 },
+    { id: 10, name: 'Sữa đặc Ông Thọ (lon)',       price: 28000 },
+    { id: 11, name: 'Coca-Cola (lon)',             price: 10000 },
+    { id: 12, name: 'Nước suối Aquafina 500ml',    price: 5000 },
+    { id: 13, name: 'Bia Sài Gòn (lon)',           price: 15000 },
+    { id: 14, name: 'Cà phê G7 (hộp)',             price: 55000 },
+    { id: 15, name: 'Nước tương Maggi 300ml',      price: 22000 },
+    { id: 16, name: 'Bột giặt OMO 800g',           price: 45000 },
+    { id: 17, name: 'Nước rửa chén Sunlight 750g', price: 32000 },
+    { id: 18, name: 'Kem đánh răng P/S',           price: 30000 },
+    { id: 19, name: 'Xà bông Lifebuoy (cục)',      price: 18000 },
+    { id: 20, name: 'Bánh Chocopie (hộp)',         price: 55000 }
+  ];
+
+  // ---------- Lưu trữ ----------
+  function load(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function save(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+
+  var products = load(KEY_PRODUCTS, null);
+  if (!Array.isArray(products)) {
+    products = DEFAULT_PRODUCTS.slice();
+    save(KEY_PRODUCTS, products);
+  }
+  // Giỏ hàng: [{ id, qty }]
+  var cart = load(KEY_CART, []);
+  if (!Array.isArray(cart)) cart = [];
+  cart = cart.filter(function (c) { return findProduct(c.id) && c.qty > 0; });
+
+  // ---------- Tiện ích ----------
+  var money = new Intl.NumberFormat('vi-VN');
+  function fmt(n) { return money.format(n) + 'đ'; }
+
+  // Bỏ dấu tiếng Việt, đổi về chữ thường: "Sữa" -> "sua"
+  function plain(s) {
+    return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function digitsOnly(s) { return String(s).replace(/\D/g, ''); }
+  function findProduct(id) {
+    for (var i = 0; i < products.length; i++) if (products[i].id === id) return products[i];
+    return null;
+  }
+  function $(id) { return document.getElementById(id); }
+
+  var toastTimer;
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+
+  // ---------- Tìm kiếm ----------
+  var searchEl = $('search');
+  var suggestEl = $('suggest');
+  var clearBtn = $('clearSearch');
+
+  // Tô vàng phần chữ khớp (so khớp trên chuỗi không dấu, vị trí tương ứng 1-1 với tên gốc)
+  function highlight(name, query) {
+    var p = plain(name);
+    var idx = p.indexOf(query);
+    if (idx < 0 || p.length !== name.length) return escapeHtml(name);
+    return escapeHtml(name.slice(0, idx)) + '<mark>' +
+      escapeHtml(name.slice(idx, idx + query.length)) + '</mark>' +
+      escapeHtml(name.slice(idx + query.length));
+  }
+
+  function searchProducts(q) {
+    var words = q.split(/\s+/).filter(Boolean);
+    var results = [];
+    products.forEach(function (p) {
+      var name = plain(p.name);
+      // Mọi chữ gõ vào đều phải có trong tên
+      for (var i = 0; i < words.length; i++) if (name.indexOf(words[i]) < 0) return;
+      // Ưu tiên: tên bắt đầu bằng chữ gõ > một từ bắt đầu bằng chữ gõ > chứa ở giữa
+      var score = name.indexOf(q) === 0 ? 0
+        : (' ' + name).indexOf(' ' + words[0]) >= 0 ? 1 : 2;
+      results.push({ p: p, score: score });
+    });
+    results.sort(function (a, b) {
+      return a.score - b.score || a.p.name.localeCompare(b.p.name, 'vi');
+    });
+    return results.map(function (r) { return r.p; });
+  }
+
+  function renderSuggest() {
+    var raw = searchEl.value;
+    var q = plain(raw).replace(/\s+/g, ' ');
+    clearBtn.style.display = raw ? 'block' : 'none';
+    if (!q) { suggestEl.style.display = 'none'; suggestEl.innerHTML = ''; return; }
+
+    var list = searchProducts(q);
+    var html = '<div class="sg-count">' +
+      (list.length ? 'Tìm thấy ' + list.length + ' món' : 'Không có món nào khớp') + '</div>';
+    list.forEach(function (p) {
+      html += '<button class="sg-item" data-id="' + p.id + '">' +
+        '<span>' + highlight(p.name, q) + '</span>' +
+        '<span class="sg-price">' + fmt(p.price) + '</span></button>';
+    });
+    html += '<button class="sg-item sg-new" data-new="1">➕ Thêm "' +
+      escapeHtml(raw.trim()) + '" làm món mới</button>';
+    suggestEl.innerHTML = html;
+    suggestEl.style.display = 'block';
+    suggestEl.scrollTop = 0;
+  }
+
+  function clearSearch() {
+    searchEl.value = '';
+    renderSuggest();
+  }
+
+  searchEl.addEventListener('input', renderSuggest);
+  searchEl.addEventListener('focus', renderSuggest);
+  clearBtn.addEventListener('click', function () { clearSearch(); searchEl.focus(); });
+
+  suggestEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('.sg-item');
+    if (!btn) return;
+    if (btn.dataset.new) {
+      var name = searchEl.value.trim();
+      clearSearch();
+      searchEl.blur();
+      openAddModal(name, true);
+      return;
+    }
+    addToCart(Number(btn.dataset.id));
+    clearSearch();
+    searchEl.blur();
+  });
+
+  // Chạm ra ngoài thì ẩn gợi ý
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.search-wrap')) suggestEl.style.display = 'none';
+  });
+
+  // ---------- Giỏ hàng ----------
+  var cartEl = $('cart');
+
+  function addToCart(id, qty) {
+    var p = findProduct(id);
+    if (!p) return;
+    var line = cart.find(function (c) { return c.id === id; });
+    if (line) {
+      line.qty += qty || 1;
+      // Đưa món vừa chọn lên đầu cho dễ thấy
+      cart.splice(cart.indexOf(line), 1);
+      cart.unshift(line);
+    } else {
+      line = { id: id, qty: qty || 1 };
+      cart.unshift(line);
+    }
+    commitCart();
+    toast('Đã thêm: ' + p.name + ' (SL: ' + line.qty + ')');
+  }
+
+  function setQty(id, qty) {
+    var line = cart.find(function (c) { return c.id === id; });
+    if (!line) return;
+    if (qty <= 0) cart.splice(cart.indexOf(line), 1);
+    else line.qty = qty;
+    commitCart();
+  }
+
+  function commitCart() {
+    save(KEY_CART, cart);
+    renderCart();
+  }
+
+  function renderCart() {
+    var total = 0, count = 0;
+    if (!cart.length) {
+      cartEl.innerHTML = '<div class="empty"><span class="big">🛒</span>' +
+        'Chưa có món nào.<br>Gõ tên món vào ô tìm kiếm phía trên.</div>';
+    } else {
+      var html = '';
+      cart.forEach(function (c) {
+        var p = findProduct(c.id);
+        var sub = p.price * c.qty;
+        total += sub; count += c.qty;
+        html += '<div class="item">' +
+          '<div class="item-top">' +
+            '<div style="flex:1"><div class="item-name">' + escapeHtml(p.name) + '</div>' +
+            '<div class="item-unit">' + fmt(p.price) + ' × ' + c.qty + '</div></div>' +
+            '<button class="btn-remove" data-act="remove" data-id="' + c.id + '" aria-label="Bỏ món">✕</button>' +
+          '</div>' +
+          '<div class="item-bottom">' +
+            '<div class="qty">' +
+              '<button class="btn-qty btn-minus" data-act="minus" data-id="' + c.id + '" aria-label="Bớt">−</button>' +
+              '<button class="qty-num" data-act="type" data-id="' + c.id + '" aria-label="Nhập số lượng">' + c.qty + '</button>' +
+              '<button class="btn-qty btn-plus" data-act="plus" data-id="' + c.id + '" aria-label="Thêm">+</button>' +
+            '</div>' +
+            '<div class="item-sub">' + fmt(sub) + '</div>' +
+          '</div></div>';
+      });
+      cartEl.innerHTML = html;
+    }
+    $('total').textContent = fmt(total);
+    $('itemCount').textContent = cart.length
+      ? cart.length + ' loại món · ' + count + ' sản phẩm'
+      : 'Chưa có món nào';
+  }
+
+  cartEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    var id = Number(btn.dataset.id);
+    var line = cart.find(function (c) { return c.id === id; });
+    if (!line) return;
+    var act = btn.dataset.act;
+    if (act === 'plus') setQty(id, line.qty + 1);
+    else if (act === 'minus') setQty(id, line.qty - 1);
+    else if (act === 'remove') setQty(id, 0);
+    else if (act === 'type') openQtyModal(id);
+  });
+
+  // ---------- Popup chung ----------
+  function openModal(el) { el.classList.add('open'); }
+  function closeModal(el) { el.classList.remove('open'); }
+  document.querySelectorAll('.overlay').forEach(function (ov) {
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(ov); });
+  });
+
+  // ---------- Thêm món mới ----------
+  var addModal = $('addModal');
+  var nameIn = $('newName'), priceIn = $('newPrice');
+  var addToCartAfterSave = false;
+
+  function updatePriceHint() {
+    var d = digitsOnly(priceIn.value).replace(/^0+/, '');
+    priceIn.value = d ? money.format(Number(d)) : '';
+    $('priceHint').innerHTML = d ? 'Giá: <b>' + fmt(Number(d)) + '</b>' : '';
+  }
+
+  function openAddModal(prefillName, thenAddToCart) {
+    addToCartAfterSave = !!thenAddToCart;
+    nameIn.value = prefillName || '';
+    priceIn.value = '';
+    updatePriceHint();
+    $('nameError').textContent = '';
+    $('priceError').textContent = '';
+    nameIn.classList.remove('invalid');
+    priceIn.classList.remove('invalid');
+    openModal(addModal);
+    setTimeout(function () { (prefillName ? priceIn : nameIn).focus(); }, 50);
+  }
+
+  priceIn.addEventListener('input', updatePriceHint);
+  $('btn000').addEventListener('click', function () {
+    var d = digitsOnly(priceIn.value);
+    if (d && d.length < 10) { priceIn.value = d + '000'; updatePriceHint(); }
+    priceIn.focus();
+  });
+
+  function saveNewProduct() {
+    var name = nameIn.value.trim().replace(/\s+/g, ' ');
+    var price = Number(digitsOnly(priceIn.value));
+    var ok = true;
+
+    $('nameError').textContent = '';
+    $('priceError').textContent = '';
+    nameIn.classList.remove('invalid');
+    priceIn.classList.remove('invalid');
+
+    if (!name) {
+      $('nameError').textContent = 'Vui lòng nhập tên sản phẩm.';
+      nameIn.classList.add('invalid'); ok = false;
+    } else if (products.some(function (p) { return plain(p.name) === plain(name); })) {
+      $('nameError').textContent = 'Món này đã có rồi.';
+      nameIn.classList.add('invalid'); ok = false;
+    }
+    if (!price || price <= 0) {
+      $('priceError').textContent = 'Vui lòng nhập giá tiền lớn hơn 0.';
+      priceIn.classList.add('invalid'); ok = false;
+    }
+    if (!ok) return;
+
+    var maxId = products.reduce(function (m, p) { return Math.max(m, p.id); }, 0);
+    var product = { id: maxId + 1, name: name, price: price };
+    products.push(product);
+    save(KEY_PRODUCTS, products);
+    closeModal(addModal);
+
+    if (addToCartAfterSave) addToCart(product.id);
+    else toast('Đã lưu món: ' + name + ' – ' + fmt(price));
+  }
+
+  $('btnOpenAdd').addEventListener('click', function () { openAddModal('', false); });
+  $('btnCancelAdd').addEventListener('click', function () { closeModal(addModal); });
+  $('btnSaveAdd').addEventListener('click', saveNewProduct);
+  nameIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') priceIn.focus(); });
+  priceIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveNewProduct(); });
+
+  // ---------- Nhập số lượng ----------
+  var qtyModal = $('qtyModal'), qtyIn = $('qtyInput');
+  var qtyEditingId = null;
+
+  function updateQtyHint() {
+    var p = findProduct(qtyEditingId);
+    var q = Number(digitsOnly(qtyIn.value)) || 0;
+    qtyIn.value = q ? String(q) : '';
+    $('qtyHint').innerHTML = p && q ? 'Thành tiền: <b>' + fmt(p.price * q) + '</b>' : '';
+  }
+  function openQtyModal(id) {
+    var p = findProduct(id);
+    var line = cart.find(function (c) { return c.id === id; });
+    if (!p || !line) return;
+    qtyEditingId = id;
+    $('qtyLabel').textContent = p.name + ' (' + fmt(p.price) + ')';
+    qtyIn.value = String(line.qty);
+    updateQtyHint();
+    openModal(qtyModal);
+    setTimeout(function () { qtyIn.focus(); qtyIn.select(); }, 50);
+  }
+  function saveQty() {
+    var q = Number(digitsOnly(qtyIn.value)) || 0;
+    if (q > 9999) q = 9999;
+    setQty(qtyEditingId, q);
+    closeModal(qtyModal);
+  }
+  qtyIn.addEventListener('input', updateQtyHint);
+  qtyIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveQty(); });
+  $('btnCancelQty').addEventListener('click', function () { closeModal(qtyModal); });
+  $('btnSaveQty').addEventListener('click', saveQty);
+
+  // ---------- Xóa & tạo đơn mới ----------
+  var confirmModal = $('confirmModal');
+  $('btnNewOrder').addEventListener('click', function () {
+    if (!cart.length) { toast('Giỏ hàng đang trống'); return; }
+    $('confirmTitle').textContent = '🗑️ Xóa đơn này?';
+    $('confirmMsg').textContent = 'Tổng đơn hiện tại là ' + $('total').textContent +
+      '. Xóa hết để tính đơn mới?';
+    openModal(confirmModal);
+  });
+  $('btnConfirmNo').addEventListener('click', function () { closeModal(confirmModal); });
+  $('btnConfirmYes').addEventListener('click', function () {
+    cart = [];
+    commitCart();
+    closeModal(confirmModal);
+    toast('Đã tạo đơn mới');
+    window.scrollTo(0, 0);
+  });
+
+  renderCart();
+
+  // ---------- Dùng khi mất mạng (PWA) ----------
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
