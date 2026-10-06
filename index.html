@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Tạp Hóa">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <title>Máy Tính Tiền</title>
 <style>
   :root {
@@ -43,21 +43,20 @@
     padding-top: max(10px, env(safe-area-inset-top));
     box-shadow: 0 2px 6px rgba(0,0,0,.25);
   }
-  .head-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-  .head-row h1 { flex: 1; color: #fff; font-size: 24px; font-weight: 800; }
-  .btn-add-new {
-    background: #fff; color: var(--red); font-weight: 800; font-size: 19px;
-    min-height: 52px; padding: 0 14px; border-radius: 12px;
+  .head-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .btn-head {
+    flex: 1; background: #fff; color: var(--red); font-weight: 800; font-size: 19px;
+    min-height: 54px; padding: 0 8px; border-radius: 12px;
   }
   .search-wrap { position: relative; }
-  #search {
+  .big-search {
     width: 100%; min-height: 64px; padding: 0 56px 0 16px;
     font-size: 24px; border: 3px solid #fff; border-radius: 14px;
     background: #fff; color: var(--ink); outline: none;
   }
-  #search:focus { border-color: #fde047; }
-  #search::placeholder { color: #6b7280; }
-  #search::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+  .big-search:focus { border-color: #fde047; }
+  .big-search::placeholder { color: #6b7280; }
+  .big-search::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
   #clearSearch {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
     width: 52px; height: 52px; border-radius: 10px;
@@ -93,7 +92,11 @@
   }
   .item-top { display: flex; gap: 10px; align-items: flex-start; }
   .item-name { flex: 1; font-size: 24px; font-weight: 800; line-height: 1.25; word-break: break-word; }
-  .item-unit { color: var(--muted); font-size: 19px; margin-top: 2px; }
+  .btn-unit {
+    margin-top: 6px; min-height: 44px; padding: 4px 12px; border-radius: 10px;
+    background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd;
+    font-size: 19px; font-weight: 700;
+  }
   .btn-remove {
     width: 52px; height: 52px; flex-shrink: 0; border-radius: 12px;
     background: #fee2e2; color: var(--red-dark); font-size: 26px; font-weight: 900;
@@ -167,6 +170,47 @@
   .btn-cancel { background: #e5e7eb; color: var(--ink); }
   .btn-ok { background: var(--green); color: #fff; }
   .btn-danger { background: var(--red); color: #fff; }
+  .btn-delete {
+    width: 100%; margin-top: 14px; min-height: 56px; border-radius: 14px;
+    background: #fff; color: var(--red); border: 2px solid var(--red);
+    font-size: 20px; font-weight: 800;
+  }
+
+  /* ---------- Màn hình sửa giá ---------- */
+  .screen {
+    position: fixed; inset: 0; z-index: 40; background: var(--bg);
+    display: none; flex-direction: column;
+  }
+  .screen.open { display: flex; }
+  .screen-head {
+    background: var(--blue); padding: 10px 12px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+  .screen-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .screen-title-row h2 { flex: 1; color: #fff; font-size: 24px; }
+  .btn-close {
+    background: #fff; color: var(--ink); font-weight: 800; font-size: 20px;
+    min-height: 54px; padding: 0 16px; border-radius: 12px;
+  }
+  .screen-body {
+    flex: 1; overflow-y: auto; padding: 12px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .pl-tip { font-size: 18px; color: var(--muted); margin-bottom: 10px; }
+  .pl-item {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 2px solid var(--line); border-radius: 14px;
+    padding: 12px; margin-bottom: 10px; text-align: left; min-height: 76px; color: var(--ink);
+  }
+  .pl-item:active { background: #eff6ff; }
+  .pl-info { flex: 1; min-width: 0; }
+  .pl-name { font-size: 22px; font-weight: 700; line-height: 1.25; word-break: break-word; }
+  .pl-name mark { background: #fde047; color: inherit; border-radius: 3px; }
+  .pl-price { font-size: 22px; font-weight: 900; color: var(--red); margin-top: 2px; }
+  .pl-edit {
+    flex-shrink: 0; background: var(--blue); color: #fff; font-size: 19px; font-weight: 800;
+    padding: 12px 14px; border-radius: 12px;
+  }
 
   /* ---------- Toast ---------- */
   #toast {
@@ -182,11 +226,11 @@
 
 <header>
   <div class="head-row">
-    <h1>🧾 Tính Tiền</h1>
-    <button class="btn-add-new" id="btnOpenAdd">➕ Thêm món mới</button>
+    <button class="btn-head" id="btnOpenList">✏️ Sửa giá</button>
+    <button class="btn-head" id="btnOpenAdd">➕ Thêm món</button>
   </div>
   <div class="search-wrap">
-    <input id="search" type="search" placeholder="🔍 Gõ tên món..." autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+    <input id="search" class="big-search" type="search" placeholder="🔍 Gõ tên món..." autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
     <button id="clearSearch" aria-label="Xóa chữ">✕</button>
     <div id="suggest" role="listbox"></div>
   </div>
@@ -203,7 +247,19 @@
   <button id="btnNewOrder">🗑️ Xóa &amp; Tạo đơn mới</button>
 </footer>
 
-<!-- Popup thêm món mới -->
+<!-- Màn hình sửa giá -->
+<div class="screen" id="listScreen">
+  <div class="screen-head">
+    <div class="screen-title-row">
+      <h2>✏️ Sửa giá món</h2>
+      <button class="btn-close" id="btnCloseList">✕ Đóng</button>
+    </div>
+    <input id="plSearch" class="big-search" type="search" placeholder="🔍 Tìm món cần sửa..." autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div class="screen-body" id="plList"></div>
+</div>
+
+<!-- Popup thêm / sửa món -->
 <div class="overlay" id="addModal">
   <div class="modal" role="dialog" aria-labelledby="addTitle">
     <h2 id="addTitle">➕ Thêm món mới</h2>
@@ -225,6 +281,7 @@
       <button class="btn-cancel" id="btnCancelAdd">Hủy</button>
       <button class="btn-ok" id="btnSaveAdd">💾 Lưu</button>
     </div>
+    <button class="btn-delete" id="btnDeleteProduct">🗑️ Xóa món này khỏi danh sách</button>
   </div>
 </div>
 
@@ -469,7 +526,7 @@
         html += '<div class="item">' +
           '<div class="item-top">' +
             '<div style="flex:1"><div class="item-name">' + escapeHtml(p.name) + '</div>' +
-            '<div class="item-unit">' + fmt(p.price) + ' × ' + c.qty + '</div></div>' +
+            '<button class="btn-unit" data-act="price" data-id="' + c.id + '">Giá ' + fmt(p.price) + ' ✏️ Sửa</button></div>' +
             '<button class="btn-remove" data-act="remove" data-id="' + c.id + '" aria-label="Bỏ món">✕</button>' +
           '</div>' +
           '<div class="item-bottom">' +
@@ -500,6 +557,7 @@
     else if (act === 'minus') setQty(id, line.qty - 1);
     else if (act === 'remove') setQty(id, 0);
     else if (act === 'type') openQtyModal(id);
+    else if (act === 'price') openEditModal(id);
   });
 
   // ---------- Popup chung ----------
@@ -509,28 +567,99 @@
     ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(ov); });
   });
 
-  // ---------- Thêm món mới ----------
+  // ---------- Xác nhận ----------
+  var confirmModal = $('confirmModal');
+  var onConfirmYes = null;
+  function askConfirm(title, msg, yesLabel, onYes) {
+    $('confirmTitle').textContent = title;
+    $('confirmMsg').textContent = msg;
+    $('btnConfirmYes').textContent = yesLabel;
+    onConfirmYes = onYes;
+    openModal(confirmModal);
+  }
+  $('btnConfirmNo').addEventListener('click', function () { closeModal(confirmModal); });
+  $('btnConfirmYes').addEventListener('click', function () {
+    var fn = onConfirmYes;
+    onConfirmYes = null;
+    closeModal(confirmModal);
+    if (fn) fn();
+  });
+
+  // ---------- Màn hình sửa giá ----------
+  var listScreen = $('listScreen'), plSearchEl = $('plSearch'), plListEl = $('plList');
+
+  function renderProductList() {
+    var q = plain(plSearchEl.value).replace(/\s+/g, ' ');
+    var list = q ? searchProducts(q) : products.slice().sort(function (a, b) {
+      return a.name.localeCompare(b.name, 'vi');
+    });
+    var html = '<div class="pl-tip">' + products.length + ' món · Chạm vào món để sửa giá</div>';
+    if (!list.length) html += '<div class="empty">Không có món nào khớp.</div>';
+    list.forEach(function (p) {
+      html += '<button class="pl-item" data-id="' + p.id + '">' +
+        '<div class="pl-info"><div class="pl-name">' + (q ? highlight(p.name, q) : escapeHtml(p.name)) + '</div>' +
+        '<div class="pl-price">' + fmt(p.price) + '</div></div>' +
+        '<span class="pl-edit">✏️ Sửa</span></button>';
+    });
+    plListEl.innerHTML = html;
+  }
+
+  function openListScreen() {
+    plSearchEl.value = '';
+    renderProductList();
+    listScreen.classList.add('open');
+    plListEl.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeListScreen() {
+    listScreen.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  $('btnOpenList').addEventListener('click', openListScreen);
+  $('btnCloseList').addEventListener('click', closeListScreen);
+  plSearchEl.addEventListener('input', renderProductList);
+  plListEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('.pl-item');
+    if (btn) openEditModal(Number(btn.dataset.id));
+  });
+
+  // ---------- Thêm / sửa món ----------
   var addModal = $('addModal');
   var nameIn = $('newName'), priceIn = $('newPrice');
   var addToCartAfterSave = false;
+  var editingId = null; // null = đang thêm món mới
 
   function updatePriceHint() {
     var d = digitsOnly(priceIn.value).replace(/^0+/, '');
     priceIn.value = d ? money.format(Number(d)) : '';
-    $('priceHint').innerHTML = d ? 'Giá: <b>' + fmt(Number(d)) + '</b>' : '';
+    var old = editingId !== null && findProduct(editingId);
+    $('priceHint').innerHTML = (d ? 'Giá: <b>' + fmt(Number(d)) + '</b>' : '') +
+      (old ? '<br>Giá cũ: ' + fmt(old.price) : '');
   }
 
-  function openAddModal(prefillName, thenAddToCart) {
+  function openProductModal(product, prefillName, thenAddToCart) {
+    editingId = product ? product.id : null;
     addToCartAfterSave = !!thenAddToCart;
-    nameIn.value = prefillName || '';
-    priceIn.value = '';
+    $('addTitle').textContent = product ? '✏️ Sửa món' : '➕ Thêm món mới';
+    $('btnDeleteProduct').style.display = product ? 'block' : 'none';
+    nameIn.value = product ? product.name : (prefillName || '');
+    priceIn.value = product ? String(product.price) : '';
     updatePriceHint();
     $('nameError').textContent = '';
     $('priceError').textContent = '';
     nameIn.classList.remove('invalid');
     priceIn.classList.remove('invalid');
     openModal(addModal);
-    setTimeout(function () { (prefillName ? priceIn : nameIn).focus(); }, 50);
+    setTimeout(function () {
+      if (product || prefillName) { priceIn.focus(); priceIn.select(); }
+      else nameIn.focus();
+    }, 50);
+  }
+  function openAddModal(prefillName, thenAddToCart) { openProductModal(null, prefillName, thenAddToCart); }
+  function openEditModal(id) {
+    var p = findProduct(id);
+    if (p) openProductModal(p);
   }
 
   priceIn.addEventListener('input', updatePriceHint);
@@ -540,7 +669,7 @@
     priceIn.focus();
   });
 
-  function saveNewProduct() {
+  function saveProduct() {
     var name = nameIn.value.trim().replace(/\s+/g, ' ');
     var price = Number(digitsOnly(priceIn.value));
     var ok = true;
@@ -553,7 +682,7 @@
     if (!name) {
       $('nameError').textContent = 'Vui lòng nhập tên sản phẩm.';
       nameIn.classList.add('invalid'); ok = false;
-    } else if (products.some(function (p) { return plain(p.name) === plain(name); })) {
+    } else if (products.some(function (p) { return p.id !== editingId && plain(p.name) === plain(name); })) {
       $('nameError').textContent = 'Món này đã có rồi.';
       nameIn.classList.add('invalid'); ok = false;
     }
@@ -563,21 +692,51 @@
     }
     if (!ok) return;
 
+    if (editingId !== null) {
+      // Sửa món có sẵn: giỏ hàng tự tính lại theo giá mới
+      var edited = findProduct(editingId);
+      edited.name = name;
+      edited.price = price;
+      save(KEY_PRODUCTS, products);
+      closeModal(addModal);
+      renderCart();
+      if (listScreen.classList.contains('open')) renderProductList();
+      toast('Đã sửa: ' + name + ' – ' + fmt(price));
+      return;
+    }
+
     var maxId = products.reduce(function (m, p) { return Math.max(m, p.id); }, 0);
     var product = { id: maxId + 1, name: name, price: price };
     products.push(product);
     save(KEY_PRODUCTS, products);
     closeModal(addModal);
+    if (listScreen.classList.contains('open')) renderProductList();
 
     if (addToCartAfterSave) addToCart(product.id);
     else toast('Đã lưu món: ' + name + ' – ' + fmt(price));
   }
 
+  function deleteProduct() {
+    var p = findProduct(editingId);
+    if (!p) return;
+    askConfirm('🗑️ Xóa món này?', 'Xóa "' + p.name + '" khỏi danh sách món? ' +
+      'Nếu món đang có trong giỏ thì cũng bị bỏ ra.', 'Xóa món', function () {
+      products = products.filter(function (x) { return x.id !== p.id; });
+      cart = cart.filter(function (c) { return c.id !== p.id; });
+      save(KEY_PRODUCTS, products);
+      commitCart();
+      closeModal(addModal);
+      if (listScreen.classList.contains('open')) renderProductList();
+      toast('Đã xóa món: ' + p.name);
+    });
+  }
+
   $('btnOpenAdd').addEventListener('click', function () { openAddModal('', false); });
   $('btnCancelAdd').addEventListener('click', function () { closeModal(addModal); });
-  $('btnSaveAdd').addEventListener('click', saveNewProduct);
+  $('btnSaveAdd').addEventListener('click', saveProduct);
+  $('btnDeleteProduct').addEventListener('click', deleteProduct);
   nameIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') priceIn.focus(); });
-  priceIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveNewProduct(); });
+  priceIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveProduct(); });
 
   // ---------- Nhập số lượng ----------
   var qtyModal = $('qtyModal'), qtyIn = $('qtyInput');
@@ -612,21 +771,15 @@
   $('btnSaveQty').addEventListener('click', saveQty);
 
   // ---------- Xóa & tạo đơn mới ----------
-  var confirmModal = $('confirmModal');
   $('btnNewOrder').addEventListener('click', function () {
     if (!cart.length) { toast('Giỏ hàng đang trống'); return; }
-    $('confirmTitle').textContent = '🗑️ Xóa đơn này?';
-    $('confirmMsg').textContent = 'Tổng đơn hiện tại là ' + $('total').textContent +
-      '. Xóa hết để tính đơn mới?';
-    openModal(confirmModal);
-  });
-  $('btnConfirmNo').addEventListener('click', function () { closeModal(confirmModal); });
-  $('btnConfirmYes').addEventListener('click', function () {
-    cart = [];
-    commitCart();
-    closeModal(confirmModal);
-    toast('Đã tạo đơn mới');
-    window.scrollTo(0, 0);
+    askConfirm('🗑️ Xóa đơn này?', 'Tổng đơn hiện tại là ' + $('total').textContent +
+      '. Xóa hết để tính đơn mới?', 'Xóa đơn', function () {
+      cart = [];
+      commitCart();
+      toast('Đã tạo đơn mới');
+      window.scrollTo(0, 0);
+    });
   });
 
   renderCart();
