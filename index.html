@@ -319,6 +319,23 @@
   .btn-big.save { background: var(--green); color: #fff; }
   .btn-big.restore { background: #fff; color: var(--blue); border: 2px solid var(--blue); }
   .btn-big.close { background: #e5e7eb; color: var(--ink); margin-bottom: 0; }
+  .btn-big:disabled { opacity: .6; }
+  .backup-lock {
+    background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 14px; font-size: 18px; line-height: 1.4;
+  }
+  .backup-lock.none { background: #fffbeb; border-color: #fcd34d; }
+  .backup-lock .pw { font-family: ui-monospace, Menlo, monospace; font-weight: 800; font-size: 20px; }
+  .lock-btns { display: flex; gap: 8px; margin-top: 8px; }
+  .lock-btns button {
+    flex: 1; min-height: 44px; border-radius: 10px; background: #fff;
+    border: 2px solid #9ca3af; color: var(--ink); font-size: 17px; font-weight: 700;
+  }
+  .pw-input { font-family: ui-monospace, Menlo, monospace; letter-spacing: 1px; }
+  .pw-warn {
+    background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 14px; font-size: 18px; line-height: 1.4; color: var(--red-dark);
+  }
   .screen-body {
     flex: 1; overflow-y: auto; padding: 12px;
     padding-bottom: max(24px, env(safe-area-inset-bottom));
@@ -488,12 +505,30 @@
 <div class="overlay" id="backupModal">
   <div class="modal" role="dialog" aria-labelledby="backupTitle">
     <h2 id="backupTitle">💾 Sao lưu dữ liệu</h2>
-    <p class="backup-note">Lưu toàn bộ món, giá và ảnh thành 1 file. Chọn <b>Lưu vào Tệp → iCloud Drive</b> để file tự có trên máy tính, hoặc gửi qua Zalo. Khi lỡ xóa app hay đổi điện thoại, bấm Khôi phục và chọn file đó.</p>
+    <p class="backup-note">Lưu toàn bộ món, giá và ảnh thành 1 file đã <b>khóa bằng mật khẩu</b>. Chọn <b>Lưu vào Tệp → iCloud Drive</b> để file tự có trên máy tính, hoặc gửi qua Zalo. Khi lỡ xóa app hay đổi điện thoại, bấm Khôi phục và chọn file đó.</p>
+    <div class="backup-lock" id="backupLock"></div>
     <div class="backup-last" id="backupLast"></div>
     <button class="btn-big save" id="btnBackup">📤 Sao lưu ngay</button>
     <button class="btn-big restore" id="btnRestore">📥 Khôi phục từ file</button>
     <button class="btn-big close" id="btnCloseBackup">Đóng</button>
     <input class="file-hidden" id="restoreInput" type="file" accept=".json,application/json,text/plain" tabindex="-1">
+  </div>
+</div>
+
+<!-- Popup mật khẩu (đặt mật khẩu sao lưu / nhập mật khẩu khi khôi phục) -->
+<div class="overlay" id="pwModal">
+  <div class="modal" role="dialog" aria-labelledby="pwTitle">
+    <h2 id="pwTitle"></h2>
+    <div class="pw-warn" id="pwNote"></div>
+    <div class="field">
+      <label for="pwInput">Mật khẩu</label>
+      <input id="pwInput" class="pw-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="error" id="pwError"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnPwCancel">Hủy</button>
+      <button class="btn-ok" id="btnPwOk">✔ Xong</button>
+    </div>
   </div>
 </div>
 
@@ -515,7 +550,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 14; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 15; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1063,15 +1098,24 @@
     });
   }
 
-  // ---------- Sao lưu / khôi phục ----------
-  // File sao lưu: { app: 'taphoa', version: 1, createdAt, products: [...], photos: { id: dataURL } }
+  // ---------- Sao lưu / khôi phục (file được mã hóa bằng mật khẩu) ----------
+  // Nội dung trước khi mã hóa: { app: 'taphoa', version: 1, createdAt, products: [...], photos: { id: dataURL } }
+  // File lưu ra (version 2): { app, version: 2, encrypted: true, kdf, iterations, salt, iv, data }
+  //   khóa AES-GCM 256 bit sinh từ mật khẩu bằng PBKDF2-SHA256; không có mật khẩu thì không đọc được.
+  // File cũ chưa mã hóa (version 1) vẫn khôi phục được.
   var KEY_LAST_BACKUP = 'taphoa_last_backup';
+  // Mật khẩu nhớ trên chính điện thoại để lần sau sao lưu khỏi gõ lại.
+  // Ai cầm được điện thoại thì vốn đã xem được hết dữ liệu, nên lưu ở đây không làm lộ thêm gì.
+  var KEY_BACKUP_PW = 'taphoa_backup_pw';
   var BACKUP_REMIND_DAYS = 7;
+  var PBKDF2_ITERATIONS = 600000;
   var backupModal = $('backupModal');
 
-  function lastBackup() {
-    try { var v = localStorage.getItem(KEY_LAST_BACKUP); return v ? new Date(v) : null; } catch (e) { return null; }
-  }
+  function getStored(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function lastBackup() { var v = getStored(KEY_LAST_BACKUP); return v ? new Date(v) : null; }
+  function backupPw() { return getStored(KEY_BACKUP_PW) || ''; }
+  function setBackupPw(pw) { try { localStorage.setItem(KEY_BACKUP_PW, pw); } catch (e) {} }
+
   function fmtDateTime(d) {
     var two = function (n) { return (n < 10 ? '0' : '') + n; };
     return two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + d.getFullYear() +
@@ -1085,18 +1129,101 @@
   function updateBackupBadge() {
     $('btnOpenBackup').classList.toggle('warn', needsBackup());
   }
-  function openBackupModal() {
-    var last = lastBackup(), el = $('backupLast');
-    el.textContent = last ? '✅ Lần sao lưu gần nhất: ' + fmtDateTime(last) : '⚠️ Chưa sao lưu lần nào';
-    el.classList.toggle('warn', needsBackup());
-    openModal(backupModal);
+
+  // ---- Mã hóa ----
+  function bytesToB64(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
   }
-  function markBackedUp() {
-    try { localStorage.setItem(KEY_LAST_BACKUP, new Date().toISOString()); } catch (e) {}
-    updateBackupBadge();
-    closeModal(backupModal);
-    toast('✅ Đã sao lưu ' + products.length + ' món');
+  function b64ToBytes(b64) {
+    var s = atob(b64), out = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+    return out;
   }
+  function deriveKey(pw, salt, iterations) {
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey'])
+      .then(function (base) {
+        return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: iterations, hash: 'SHA-256' },
+          base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+      });
+  }
+  function encryptBackup(plainJson, pw) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return deriveKey(pw, salt, PBKDF2_ITERATIONS).then(function (key) {
+      return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(plainJson));
+    }).then(function (ct) {
+      return JSON.stringify({
+        app: 'taphoa', version: 2, encrypted: true, cipher: 'AES-GCM-256', kdf: 'PBKDF2-SHA256',
+        iterations: PBKDF2_ITERATIONS, salt: bytesToB64(salt), iv: bytesToB64(iv), data: bytesToB64(new Uint8Array(ct))
+      });
+    });
+  }
+  // Sai mật khẩu thì AES-GCM báo lỗi (promise bị từ chối)
+  function decryptBackup(wrapper, pw) {
+    var it = wrapper.iterations;
+    if (typeof it !== 'number' || it < 100000 || it > 5000000) return Promise.reject(new Error('File lỗi'));
+    return deriveKey(pw, b64ToBytes(wrapper.salt), it).then(function (key) {
+      return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(wrapper.iv) }, key, b64ToBytes(wrapper.data));
+    }).then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); });
+  }
+
+  // ---- Popup mật khẩu dùng chung ----
+  // onOk(pw) trả về Promise<string>: chuỗi rỗng = xong (đóng popup), có chữ = báo lỗi và để nhập lại
+  var pwModal = $('pwModal'), pwInput = $('pwInput'), pwOnOk = null;
+  function askPassword(opts, onOk) {
+    $('pwTitle').textContent = opts.title;
+    $('pwNote').textContent = opts.note;
+    $('btnPwOk').textContent = opts.okLabel;
+    $('btnPwOk').disabled = false;
+    $('pwError').textContent = '';
+    pwInput.value = '';
+    pwInput.classList.remove('invalid');
+    pwOnOk = onOk;
+    openModal(pwModal);
+    setTimeout(function () { pwInput.focus(); }, 50);
+  }
+  function submitPassword() {
+    if (!pwOnOk || $('btnPwOk').disabled) return;
+    var pw = pwInput.value, okBtn = $('btnPwOk'), label = okBtn.textContent;
+    okBtn.disabled = true;
+    okBtn.textContent = '⏳ Đang xử lý…';
+    pwOnOk(pw).then(function (err) {
+      okBtn.disabled = false;
+      okBtn.textContent = label;
+      if (err) {
+        $('pwError').textContent = err;
+        pwInput.classList.add('invalid');
+        pwInput.focus();
+        return;
+      }
+      pwOnOk = null;
+      closeModal(pwModal);
+    });
+  }
+  $('btnPwOk').addEventListener('click', submitPassword);
+  pwInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitPassword(); });
+  $('btnPwCancel').addEventListener('click', function () { pwOnOk = null; closeModal(pwModal); });
+
+  function setPasswordFlow(isChange) {
+    askPassword({
+      title: isChange ? '✏️ Đổi mật khẩu sao lưu' : '🔒 Đặt mật khẩu sao lưu',
+      note: '⚠️ Hãy GHI MẬT KHẨU RA GIẤY và cất kỹ. Quên mật khẩu thì không ai mở được file sao lưu, kể cả người làm app.' +
+        (isChange ? ' File sao lưu cũ vẫn phải mở bằng mật khẩu cũ.' : ''),
+      okLabel: '🔒 Lưu mật khẩu'
+    }, function (pw) {
+      if (pw.trim().length < 6) return Promise.resolve('Mật khẩu cần ít nhất 6 ký tự.');
+      setBackupPw(pw);
+      prepareBackup();
+      toast(isChange ? '🔒 Đã đổi mật khẩu' : '🔒 Đã đặt mật khẩu. Bấm 📤 Sao lưu ngay');
+      return Promise.resolve('');
+    });
+  }
+
+  // ---- Chuẩn bị sẵn file khi mở popup, để bấm Sao lưu là mở ngay bảng chia sẻ
+  // (iPhone chỉ cho mở bảng chia sẻ ngay lúc bấm, không chờ mã hóa được) ----
+  var prepared = null, preparingToken = null, pwRevealed = false;
 
   function backupFileName() {
     var d = new Date(), two = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -1106,6 +1233,61 @@
     var data = { app: 'taphoa', version: 1, createdAt: new Date().toISOString(), products: products, photos: {} };
     products.forEach(function (p) { if (photos[p.id]) data.photos[p.id] = photos[p.id]; });
     return JSON.stringify(data);
+  }
+  function prepareBackup() {
+    prepared = null;
+    var pw = backupPw();
+    if (!pw || !products.length || !window.crypto || !crypto.subtle) { preparingToken = null; updateBackupUI(); return; }
+    var token = {};
+    preparingToken = token;
+    updateBackupUI();
+    encryptBackup(buildBackupJson(), pw).then(function (json) {
+      if (preparingToken !== token) return;
+      var name = backupFileName();
+      prepared = {
+        file: new File([json], name, { type: 'application/json' }),
+        txt: new File([json], name.replace(/\.json$/, '.txt'), { type: 'text/plain' })
+      };
+      preparingToken = null;
+      updateBackupUI();
+    }).catch(function () {
+      if (preparingToken !== token) return;
+      preparingToken = null;
+      updateBackupUI();
+      toast('⚠️ Không khóa được file, thử đóng mở lại');
+    });
+  }
+  function updateBackupUI() {
+    var pw = backupPw(), lock = $('backupLock'), btn = $('btnBackup');
+    lock.classList.toggle('none', !pw);
+    lock.innerHTML = pw
+      ? '🔒 File sao lưu được khóa bằng mật khẩu: <span class="pw">' +
+        (pwRevealed ? escapeHtml(pw) : '••••••') + '</span>' +
+        '<div class="lock-btns"><button type="button" id="btnPwReveal">' + (pwRevealed ? '🙈 Ẩn' : '👁 Xem mật khẩu') + '</button>' +
+        '<button type="button" id="btnPwChange">✏️ Đổi mật khẩu</button></div>'
+      : '🔓 Chưa đặt mật khẩu. Bấm <b>Sao lưu ngay</b> để đặt mật khẩu khóa file.';
+    var busy = !!pw && !!preparingToken;
+    btn.disabled = busy;
+    btn.textContent = busy ? '⏳ Đang khóa file…' : '📤 Sao lưu ngay';
+  }
+  $('backupLock').addEventListener('click', function (e) {
+    if (e.target.closest('#btnPwReveal')) { pwRevealed = !pwRevealed; updateBackupUI(); }
+    else if (e.target.closest('#btnPwChange')) setPasswordFlow(true);
+  });
+
+  function openBackupModal() {
+    var last = lastBackup(), el = $('backupLast');
+    el.textContent = last ? '✅ Lần sao lưu gần nhất: ' + fmtDateTime(last) : '⚠️ Chưa sao lưu lần nào';
+    el.classList.toggle('warn', needsBackup());
+    pwRevealed = false;
+    prepareBackup();
+    openModal(backupModal);
+  }
+  function markBackedUp() {
+    try { localStorage.setItem(KEY_LAST_BACKUP, new Date().toISOString()); } catch (e) {}
+    updateBackupBadge();
+    closeModal(backupModal);
+    toast('✅ Đã sao lưu ' + products.length + ' món (đã khóa mật khẩu)');
   }
   // Tải file về máy (dùng khi trình duyệt không có bảng chia sẻ)
   function downloadFile(file) {
@@ -1121,19 +1303,21 @@
   }
   function exportBackup() {
     if (!products.length) { toast('Chưa có món nào để sao lưu'); return; }
-    var json = buildBackupJson(), name = backupFileName();
-    var file = new File([json], name, { type: 'application/json' });
+    if (!window.crypto || !crypto.subtle) { toast('⚠️ Trình duyệt này không khóa được file'); return; }
+    if (!backupPw()) { setPasswordFlow(false); return; }
+    if (!prepared) { toast('⏳ Đang khóa file, đợi một chút rồi bấm lại'); return; }
+    var f = prepared.file, t = prepared.txt;
     // Một số trình duyệt chỉ cho chia sẻ file chữ thường: thử thêm bản .txt
-    var txt = new File([json], name.replace(/\.json$/, '.txt'), { type: 'text/plain' });
-    var shareFile = navigator.canShare && (navigator.canShare({ files: [file] }) ? file :
-      navigator.canShare({ files: [txt] }) ? txt : null);
-    if (!shareFile) { downloadFile(file); return; }
+    var shareFile = navigator.canShare && (navigator.canShare({ files: [f] }) ? f :
+      navigator.canShare({ files: [t] }) ? t : null);
+    if (!shareFile) { downloadFile(f); return; }
     // iPhone: mở bảng chia sẻ để Lưu vào Tệp / iCloud Drive / Zalo / AirDrop
     navigator.share({ files: [shareFile], title: 'Sao lưu Tạp Hóa' })
       .then(markBackedUp)
-      .catch(function (err) { if (!err || err.name !== 'AbortError') downloadFile(file); });
+      .catch(function (err) { if (!err || err.name !== 'AbortError') downloadFile(f); });
   }
 
+  // ---- Khôi phục ----
   // Chỉ nhận đúng các trường của món hàng, bỏ dữ liệu lạ trong file
   function cleanProduct(p) {
     if (!p || typeof p.id !== 'number' || typeof p.name !== 'string' || !p.name.trim() ||
@@ -1157,45 +1341,72 @@
       Object.keys(newPhotos).forEach(function (id) { store.put(newPhotos[id], Number(id)); });
     });
   }
+  // data: nội dung đã giải mã (hoặc file cũ chưa mã hóa)
+  function confirmRestore(data) {
+    if (!data || data.app !== 'taphoa' || !Array.isArray(data.products)) {
+      toast('⚠️ File này không phải file sao lưu của app');
+      return;
+    }
+    var seen = {};
+    var list = data.products.map(cleanProduct).filter(function (p) {
+      if (!p || seen[p.id]) return false;
+      seen[p.id] = true;
+      return true;
+    });
+    var newPhotos = {};
+    Object.keys(data.photos || {}).forEach(function (id) {
+      var v = data.photos[id];
+      if (seen[id] && typeof v === 'string' && v.indexOf('data:image/') === 0) newPhotos[id] = v;
+    });
+    var when = data.createdAt && !isNaN(new Date(data.createdAt)) ? fmtDateTime(new Date(data.createdAt)) : 'không rõ';
+    askConfirm('📥 Khôi phục dữ liệu?',
+      'File sao lưu ngày ' + when + ':\n• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n\n' +
+      'Danh sách hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.',
+      'Khôi phục', function () {
+        products = list;
+        save(KEY_PRODUCTS, products);
+        pruneCart();
+        commitCart();
+        closeModal(backupModal);
+        replaceAllPhotos(newPhotos)
+          .catch(function () { toast('⚠️ Không lưu được ảnh, máy có thể đã đầy bộ nhớ'); })
+          .then(function () {
+            renderCart();
+            if (listScreen.classList.contains('open')) renderProductList();
+          });
+        if (listScreen.classList.contains('open')) renderProductList();
+        updateBackupBadge();
+        toast('✅ Đã khôi phục ' + list.length + ' món');
+      });
+  }
   function importBackup(file) {
     var reader = new FileReader();
     reader.onload = function () {
-      var data;
-      try { data = JSON.parse(reader.result); } catch (e) { data = null; }
-      if (!data || data.app !== 'taphoa' || !Array.isArray(data.products)) {
-        toast('⚠️ File này không phải file sao lưu của app');
-        return;
-      }
-      var seen = {};
-      var list = data.products.map(cleanProduct).filter(function (p) {
-        if (!p || seen[p.id]) return false;
-        seen[p.id] = true;
-        return true;
-      });
-      var newPhotos = {};
-      Object.keys(data.photos || {}).forEach(function (id) {
-        var v = data.photos[id];
-        if (seen[id] && typeof v === 'string' && v.indexOf('data:image/') === 0) newPhotos[id] = v;
-      });
-      var when = data.createdAt && !isNaN(new Date(data.createdAt)) ? fmtDateTime(new Date(data.createdAt)) : 'không rõ';
-      askConfirm('📥 Khôi phục dữ liệu?',
-        'File sao lưu ngày ' + when + ':\n• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n\n' +
-        'Danh sách hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.',
-        'Khôi phục', function () {
-          products = list;
-          save(KEY_PRODUCTS, products);
-          pruneCart();
-          commitCart();
-          closeModal(backupModal);
-          replaceAllPhotos(newPhotos)
-            .catch(function () { toast('⚠️ Không lưu được ảnh, máy có thể đã đầy bộ nhớ'); })
-            .then(function () {
-              renderCart();
-              if (listScreen.classList.contains('open')) renderProductList();
-            });
-          if (listScreen.classList.contains('open')) renderProductList();
-          toast('✅ Đã khôi phục ' + list.length + ' món');
+      var wrapper;
+      try { wrapper = JSON.parse(reader.result); } catch (e) { wrapper = null; }
+      if (!wrapper || wrapper.app !== 'taphoa') { toast('⚠️ File này không phải file sao lưu của app'); return; }
+      if (!wrapper.encrypted) { confirmRestore(wrapper); return; }   // file cũ chưa khóa
+      if (!window.crypto || !crypto.subtle) { toast('⚠️ Trình duyệt này không mở được file đã khóa'); return; }
+      function askPw() {
+        askPassword({
+          title: '🔒 Nhập mật khẩu',
+          note: 'File sao lưu này đã được khóa. Nhập mật khẩu đã đặt lúc sao lưu để mở.',
+          okLabel: '🔓 Mở file'
+        }, function (pw) {
+          if (!pw) return Promise.resolve('Vui lòng nhập mật khẩu.');
+          return decryptBackup(wrapper, pw).then(function (data) {
+            // Máy mới chưa có mật khẩu: nhớ luôn để lần sau sao lưu khỏi đặt lại
+            if (!backupPw()) setBackupPw(pw);
+            confirmRestore(data);
+            return '';
+          }, function () { return 'Sai mật khẩu, thử lại.'; });
         });
+      }
+      // Thử mật khẩu đang nhớ trên máy trước; đúng thì khỏi phải gõ
+      var saved = backupPw();
+      if (!saved) { askPw(); return; }
+      toast('⏳ Đang mở file…');
+      decryptBackup(wrapper, saved).then(confirmRestore, askPw);
     };
     reader.onerror = function () { toast('⚠️ Không đọc được file'); };
     reader.readAsText(file);
