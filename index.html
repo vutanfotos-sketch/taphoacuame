@@ -45,9 +45,11 @@
   }
   .head-row { display: flex; gap: 8px; margin-bottom: 10px; }
   .btn-head {
-    flex: 1; background: #fff; color: var(--red); font-weight: 800; font-size: 19px;
-    min-height: 54px; padding: 0 8px; border-radius: 12px;
+    flex: 1; min-width: 0; background: #fff; color: var(--red); font-weight: 800; font-size: 16px;
+    min-height: 58px; padding: 4px 2px; border-radius: 12px; white-space: nowrap; line-height: 1.15;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   }
+  .btn-head .ico { font-size: 22px; }
   .search-wrap { position: relative; }
   .big-search {
     width: 100%; min-height: 64px; padding: 0 56px 0 16px;
@@ -211,6 +213,48 @@
   .cash-chips .chip.on { background: var(--green); border-color: var(--green); color: #fff; }
   .pay-label { display: block; font-weight: 800; font-size: 20px; margin-bottom: 8px; }
   .btn-ok:disabled { opacity: .45; }
+  .btn-pay-done {
+    width: 100%; min-height: 60px; border-radius: 14px; margin: 0 0 22px;
+    background: var(--green); color: #fff; font-size: 21px; font-weight: 800;
+  }
+  .btn-pay-done:disabled { background: #d1d5db; color: #6b7280; }
+  .btn-pay-close {
+    width: 100%; min-height: 56px; border-radius: 14px; margin-top: 4px;
+    background: #e5e7eb; color: var(--ink); font-size: 20px; font-weight: 800;
+  }
+
+  /* ---------- Lịch sử đơn ---------- */
+  .screen-head.hist-head { background: #0f766e; }
+  .day-nav { display: flex; align-items: center; gap: 8px; }
+  .day-btn {
+    width: 54px; min-height: 52px; border-radius: 12px; background: #fff;
+    color: #0f766e; font-size: 22px; font-weight: 900;
+  }
+  .day-btn:disabled { opacity: .35; }
+  .day-label {
+    flex: 1; text-align: center; color: #fff; font-size: 19px; font-weight: 800; line-height: 1.3;
+  }
+  .hist-sum {
+    background: #fff; border: 2px solid #5eead4; border-radius: 14px; padding: 12px 14px;
+    margin-bottom: 12px; font-size: 19px; line-height: 1.5;
+  }
+  .hist-sum b { color: #0f766e; font-size: 22px; }
+  .order {
+    background: #fff; border: 2px solid var(--line); border-radius: 14px;
+    padding: 12px; margin-bottom: 10px;
+  }
+  .order-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .order-time { font-size: 19px; font-weight: 800; color: var(--muted); }
+  .order-total { font-size: 24px; font-weight: 900; color: var(--red); }
+  .order-items { font-size: 18px; line-height: 1.45; margin-top: 6px; }
+  .order-pay { font-size: 16px; color: var(--muted); margin-top: 4px; }
+  .order-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .order-btns button {
+    flex: 1; min-height: 46px; border-radius: 10px; font-size: 17px; font-weight: 800;
+  }
+  .btn-reopen { background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd; }
+  .btn-del-order { background: #fff; color: var(--red); border: 2px solid #fca5a5; }
+  .hist-note { text-align: center; font-size: 16px; color: var(--muted); margin: 14px 0 6px; }
 
   /* ---------- Modal ---------- */
   .overlay {
@@ -402,8 +446,9 @@
 
 <header>
   <div class="head-row">
-    <button class="btn-head" id="btnOpenList">✏️ Sửa giá</button>
-    <button class="btn-head" id="btnOpenAdd">➕ Thêm món</button>
+    <button class="btn-head" id="btnOpenList"><span class="ico">✏️</span>Sửa giá</button>
+    <button class="btn-head" id="btnOpenAdd"><span class="ico">➕</span>Thêm món</button>
+    <button class="btn-head" id="btnOpenHistory"><span class="ico">📋</span>Đơn đã bán</button>
   </div>
   <div class="search-wrap">
     <input id="search" class="big-search" type="search" placeholder="🔍 Gõ tên món..." autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
@@ -423,6 +468,22 @@
   </div>
   <button class="btn-pay" id="btnPay" style="display:none">💵 Khách đưa tiền</button>
 </footer>
+
+<!-- Màn hình lịch sử đơn đã bán -->
+<div class="screen" id="historyScreen">
+  <div class="screen-head hist-head">
+    <div class="screen-title-row">
+      <h2>📋 Đơn đã bán</h2>
+      <button class="btn-close" id="btnCloseHistory">✕ Đóng</button>
+    </div>
+    <div class="day-nav">
+      <button class="day-btn" id="btnDayPrev" aria-label="Ngày trước">◀</button>
+      <div class="day-label" id="dayLabel"></div>
+      <button class="day-btn" id="btnDayNext" aria-label="Ngày sau">▶</button>
+    </div>
+  </div>
+  <div class="screen-body" id="historyList"></div>
+</div>
 
 <!-- Màn hình sửa giá -->
 <div class="screen" id="listScreen">
@@ -565,6 +626,7 @@
       <div class="pay-row big" id="payResultRow"><span id="payLabel">Thối lại</span><b id="payChange">—</b></div>
       <div class="pay-bills" id="payBills"></div>
     </div>
+    <button class="btn-pay-done" id="btnPayDone">✅ Xong — lưu đơn</button>
     <span class="pay-label">Chạm số tiền khách đưa:</span>
     <div class="chips cash-chips" id="cashChips"></div>
     <label class="pay-label" for="cashIn">Hoặc gõ số tiền:</label>
@@ -574,10 +636,7 @@
         <button class="btn-000" id="btnCash000" type="button">000</button>
       </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="btnPayClose">Đóng</button>
-      <button class="btn-ok" id="btnPayDone">✅ Xong, đơn mới</button>
-    </div>
+    <button class="btn-pay-close" id="btnPayClose">Đóng (chưa xong)</button>
   </div>
 </div>
 
@@ -599,7 +658,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 16; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 17; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -700,9 +759,19 @@
   function openDb() {
     if (!dbPromise) dbPromise = new Promise(function (resolve, reject) {
       if (!window.indexedDB) { reject(new Error('Không có IndexedDB')); return; }
-      var req = indexedDB.open('taphoa', 1);
-      req.onupgradeneeded = function () { req.result.createObjectStore('photos'); };
-      req.onsuccess = function () { resolve(req.result); };
+      // Bản 2 thêm kho "orders" (lịch sử đơn), khóa là thời điểm bán (ms)
+      var req = indexedDB.open('taphoa', 2);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos');
+        if (!db.objectStoreNames.contains('orders')) db.createObjectStore('orders', { keyPath: 'ts' });
+      };
+      req.onsuccess = function () {
+        var db = req.result;
+        // Bản app mới cần nâng cấp kho: nhả kết nối để không bị kẹt, lần sau tự mở lại
+        db.onversionchange = function () { db.close(); dbPromise = null; };
+        resolve(db);
+      };
       req.onerror = function () { reject(req.error); };
     });
     return dbPromise;
@@ -1865,14 +1934,162 @@
     cashIn.focus();
   });
   $('btnPayClose').addEventListener('click', function () { closeModal(payModal); });
-  // Thối xong: xóa giỏ để tính khách tiếp theo (chỉ bấm được khi khách đã đưa đủ)
+  // Thối xong: lưu đơn vào lịch sử rồi xóa giỏ để tính khách tiếp theo
+  // (chỉ bấm được khi khách đã đưa đủ; lưu không được thì giữ nguyên giỏ)
   $('btnPayDone').addEventListener('click', function () {
-    var total = cartTotal;
-    cart = [];
-    commitCart();
-    closeModal(payModal);
-    window.scrollTo(0, 0);
-    toast('✅ Xong đơn ' + fmt(total) + '. Mời khách tiếp theo');
+    var btn = $('btnPayDone');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    var given = Number(digitsOnly(cashIn.value)) || 0, total = cartTotal;
+    saveOrder(buildOrder(given)).then(function () {
+      cart = [];
+      commitCart();
+      closeModal(payModal);
+      window.scrollTo(0, 0);
+      toast('✅ Đã lưu đơn ' + fmt(total) + '. Mời khách tiếp theo');
+    }).catch(function () {
+      btn.disabled = false;
+      toast('⚠️ Không lưu được đơn, thử bấm lại');
+    });
+  });
+
+  // ---------- Lịch sử đơn đã bán (IndexedDB, giữ 90 ngày) ----------
+  // Đơn: { ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change }
+  var ORDER_KEEP_DAYS = 90;
+  var DAY_MS = 86400000;
+
+  function ordersStore(mode, fn) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('orders', mode), result;
+        result = fn(tx.objectStore('orders'));
+        tx.oncomplete = function () { resolve(result && result.result); };
+        tx.onerror = function () { reject(tx.error); };
+        tx.onabort = function () { reject(tx.error); };
+      });
+    });
+  }
+  function buildOrder(given) {
+    var items = cart.map(function (c) {
+      var p = findProduct(c.id), price = linePrice(p, c.unit, c.qty);
+      return { id: c.id, name: p.name, unit: c.unit || '', unitName: c.unit || mainUnitName(p),
+        qty: c.qty, price: price, sub: price * c.qty };
+    });
+    return { ts: Date.now(), items: items, total: cartTotal, given: given, change: Math.max(0, given - cartTotal) };
+  }
+  function saveOrder(order) { return ordersStore('readwrite', function (st) { st.put(order); }); }
+  function deleteOrder(ts) { return ordersStore('readwrite', function (st) { st.delete(ts); }); }
+  function getOrders(from, to) {
+    return ordersStore('readonly', function (st) { return st.getAll(IDBKeyRange.bound(from, to, false, true)); });
+  }
+  // Xóa đơn quá 90 ngày cho máy khỏi đầy
+  function purgeOldOrders() {
+    var cutoff = Date.now() - ORDER_KEEP_DAYS * DAY_MS;
+    return ordersStore('readwrite', function (st) { st.delete(IDBKeyRange.upperBound(cutoff)); });
+  }
+
+  var historyScreen = $('historyScreen'), historyList = $('historyList');
+  var histDay = 0; // 0 = hôm nay, 1 = hôm qua, ...
+  function dayStart(offset) {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - offset);
+    return d;
+  }
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  function dayLabel(offset) {
+    var d = dayStart(offset);
+    var date = two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + d.getFullYear();
+    var names = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    return (offset === 0 ? 'Hôm nay' : offset === 1 ? 'Hôm qua' : names[d.getDay()]) + '<br>' + date;
+  }
+  var shownOrders = [];
+  function renderHistory() {
+    $('dayLabel').innerHTML = dayLabel(histDay);
+    $('btnDayNext').disabled = histDay === 0;
+    $('btnDayPrev').disabled = histDay >= ORDER_KEEP_DAYS - 1;
+    var from = dayStart(histDay).getTime(), to = from + DAY_MS;
+    historyList.innerHTML = '<div class="empty">⏳ Đang tải…</div>';
+    getOrders(from, to).then(function (list) {
+      shownOrders = (list || []).sort(function (a, b) { return b.ts - a.ts; });
+      var revenue = shownOrders.reduce(function (s, o) { return s + o.total; }, 0);
+      var html = '<div class="hist-sum"><b>' + shownOrders.length + '</b> đơn · Doanh thu <b>' + fmt(revenue) + '</b></div>';
+      if (!shownOrders.length) html += '<div class="empty">Chưa có đơn nào trong ngày này.</div>';
+      shownOrders.forEach(function (o) {
+        var t = new Date(o.ts);
+        html += '<div class="order">' +
+          '<div class="order-top"><span class="order-time">🕒 ' + two(t.getHours()) + ':' + two(t.getMinutes()) + '</span>' +
+          '<b class="order-total">' + fmt(o.total) + '</b></div>' +
+          '<div class="order-items">' + o.items.map(function (it) {
+            return escapeHtml(it.qty + ' ' + it.unitName + ' ' + it.name) + ' <span style="color:var(--muted)">(' + fmt(it.sub) + ')</span>';
+          }).join('<br>') + '</div>' +
+          (o.given ? '<div class="order-pay">Khách đưa ' + fmt(o.given) + ' · thối ' + fmt(o.change) + '</div>' : '') +
+          '<div class="order-btns">' +
+            '<button class="btn-reopen" data-act="reopen" data-ts="' + o.ts + '">↩️ Mở lại đơn</button>' +
+            '<button class="btn-del-order" data-act="del" data-ts="' + o.ts + '">🗑️ Xóa đơn</button>' +
+          '</div></div>';
+      });
+      html += '<div class="hist-note">Đơn được lưu ' + ORDER_KEEP_DAYS + ' ngày, sau đó tự xóa.</div>';
+      historyList.innerHTML = html;
+    }).catch(function () {
+      historyList.innerHTML = '<div class="empty">⚠️ Không đọc được lịch sử đơn.</div>';
+    });
+  }
+  function openHistory() {
+    histDay = 0;
+    renderHistory();
+    historyScreen.classList.add('open');
+    historyList.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeHistory() {
+    historyScreen.classList.remove('open');
+    document.body.style.overflow = '';
+    reloadIfIdle();
+  }
+  function timeOf(o) { var t = new Date(o.ts); return two(t.getHours()) + ':' + two(t.getMinutes()); }
+
+  // Mở lại đơn: đưa các món về giỏ (giá tính theo giá hiện tại), bỏ đơn khỏi lịch sử
+  function reopenOrder(o) {
+    var msg = 'Đưa đơn ' + fmt(o.total) + ' lúc ' + timeOf(o) + ' trở lại giỏ để sửa hoặc tính lại?\n' +
+      'Đơn này sẽ được bỏ khỏi lịch sử; bấm Xong lần nữa sẽ lưu lại.' +
+      (cart.length ? '\n\n⚠️ Giỏ đang có ' + cart.length + ' món sẽ bị thay bằng đơn này.' : '');
+    askConfirm('↩️ Mở lại đơn?', msg, 'Mở lại', function () {
+      var missing = 0;
+      cart = [];
+      o.items.forEach(function (it) {
+        var p = findProduct(it.id);
+        if (!p || (it.unit && !findUnit(p, it.unit))) { missing++; return; }
+        var line = { id: it.id, qty: it.qty };
+        if (it.unit) line.unit = it.unit;
+        cart.push(line);
+      });
+      commitCart();
+      deleteOrder(o.ts).catch(function () {});
+      closeHistory();
+      window.scrollTo(0, 0);
+      toast(missing ? '↩️ Đã mở lại đơn (' + missing + ' món đã bị xóa khỏi danh sách nên không thêm được)'
+        : '↩️ Đã mở lại đơn vào giỏ');
+    });
+  }
+  function removeOrder(o) {
+    askConfirm('🗑️ Xóa đơn này?', 'Xóa đơn ' + fmt(o.total) + ' lúc ' + timeOf(o) +
+      ' khỏi lịch sử? Doanh thu trong ngày sẽ trừ đi số này.', 'Xóa đơn', function () {
+      deleteOrder(o.ts).then(renderHistory, function () { toast('⚠️ Không xóa được đơn'); });
+    });
+  }
+
+  $('btnOpenHistory').addEventListener('click', openHistory);
+  $('btnCloseHistory').addEventListener('click', closeHistory);
+  $('btnDayPrev').addEventListener('click', function () { histDay++; renderHistory(); });
+  $('btnDayNext').addEventListener('click', function () { if (histDay > 0) { histDay--; renderHistory(); } });
+  historyList.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    var o = shownOrders.find(function (x) { return x.ts === Number(btn.dataset.ts); });
+    if (!o) return;
+    if (btn.dataset.act === 'reopen') reopenOrder(o);
+    else if (btn.dataset.act === 'del') removeOrder(o);
   });
 
   // ---------- Xóa & tạo đơn mới ----------
@@ -1889,6 +2106,7 @@
 
   renderCart();
   // Ảnh đọc từ bộ nhớ hơi chậm hơn, có rồi thì vẽ lại cho hiện ảnh
+  purgeOldOrders().catch(function () {});
   loadAllPhotos().then(function () {
     renderCart();
     if (listScreen.classList.contains('open')) renderProductList();
