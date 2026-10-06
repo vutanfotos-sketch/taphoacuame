@@ -29,7 +29,8 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 
 - localStorage: `taphoa_products`, `taphoa_cart`, `taphoa_last_backup`, `taphoa_backup_pw`, `taphoa_order_keep_days`,
   `taphoa_shop` (`{ name }`: chỉ tên tiệm; chủ tiệm không muốn có địa chỉ và số điện thoại).
-  `taphoa_settings` (`{ askCustomer }`: bật ghi tên khách, mặc định tắt vì tạp hóa không cần, tiệm đồ dùng cần),
+  `taphoa_settings` (`{ askCustomer, allowDebt }`, hai công tắc độc lập, mặc định tắt: tạp hóa nhà chủ tiệm chỉ bật
+  ghi nợ, tên khách chỉ gõ khi khách xin mua nợ; tiệm đồ dùng bật ghi tên khách ngay từ đầu),
   `taphoa_recent_customers` (tên khách gần đây, giữ cách viết đầu tiên), `taphoa_cart_customer` (khách của đơn đang tính,
   chọn trước khi chọn hàng).
 - IndexedDB `taphoa` phiên bản 3: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),

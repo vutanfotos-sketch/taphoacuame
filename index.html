@@ -802,10 +802,10 @@
       <input id="shopNameIn" type="text" autocomplete="off" maxlength="40" placeholder="Ví dụ: Tạp Hóa Cô Ba">
       <div class="error" id="shopError"></div>
     </div>
-    <label class="switch-row" for="optCustomer"><input type="checkbox" id="optCustomer"> 👤 Ghi tên khách khi bán</label>
-    <p class="opt-note">Bật nếu cần biết ai mua (ví dụ bán đồ dùng, bán sỉ): lúc tính tiền sẽ có ô ghi tên khách, xem được doanh thu theo từng khách. Tạp hóa bán lẻ thì để tắt.</p>
+    <label class="switch-row" for="optCustomer"><input type="checkbox" id="optCustomer"> 👤 Ghi tên khách ngay từ đầu</label>
+    <p class="opt-note">Bật nếu đơn nào cũng cần biết ai mua (ví dụ bán đồ dùng, bán sỉ): màn hình bán có nút chọn khách trước khi chọn hàng. Tạp hóa bán lẻ thì để tắt.</p>
     <label class="switch-row" for="optDebt"><input type="checkbox" id="optDebt"> 📒 Cho ghi nợ (mua chịu, trả sau)</label>
-    <p class="opt-note">Bật thì lúc tính tiền có nút Ghi nợ, và trong Đơn đã bán có Sổ nợ xem ai còn nợ bao nhiêu. Bật cái này sẽ tự bật Ghi tên khách.</p>
+    <p class="opt-note">Bật thì lúc tính tiền có nút "Khách mua nợ": bấm vào mới hiện ô ghi tên khách để ghi nợ. Trong Đơn đã bán có Sổ nợ xem ai còn nợ bao nhiêu. Không cần bật Ghi tên khách ngay từ đầu.</p>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnShopCancel">Hủy</button>
       <button class="btn-ok" id="btnShopSave">💾 Lưu</button>
@@ -889,7 +889,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 31; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 32; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -2307,6 +2307,7 @@
     cashIn.value = '';
     // Tên khách: chỉ hiện khi máy này bật "Ghi tên khách khi bán"
     var askCust = settings().askCustomer;
+    payCustShown = !!askCust;
     $('custBox').style.display = askCust ? '' : 'none';
     $('custIn').value = askCust ? currentCustomer : '';
     $('custChips').innerHTML = askCust ? customerChipsHtml('', 8) : '';
@@ -2342,7 +2343,7 @@
     btn.disabled = true;
     var given = Number(digitsOnly(cashIn.value)) || 0, total = cartTotal;
     var order = buildOrder(given);
-    var cust = settings().askCustomer ? canonicalName($('custIn').value) : '';
+    var cust = payCustShown ? canonicalName($('custIn').value) : '';
     if (cust) order.customer = cust;
     saveOrder(order).then(function () {
       if (cust) addRecentCustomer(cust);
@@ -2405,11 +2406,19 @@
     if (!settings().allowDebt) { debtCache = {}; return Promise.resolve(); }
     return getAllDebts().then(function (all) { debtCache = debtGroups(all); }).catch(function () {});
   }
+  var payCustShown = false;   // ô tên khách trong popup tiền thối đang hiện chưa
   function updateDebtButton(given, total) {
     var btn = $('btnPayDebt'), info = $('custDebtInfo');
     if (!settings().allowDebt) { btn.style.display = 'none'; info.textContent = ''; return; }
     btn.style.display = '';
-    var name = canonicalName($('custIn').value), owe = total - given, old = name ? custOwes(name) : 0;
+    var owe = total - given;
+    // Tạp hóa không ghi tên từ đầu: nút này mở ô tên khách khi khách xin mua nợ
+    if (!payCustShown) {
+      btn.disabled = owe <= 0;
+      btn.textContent = owe <= 0 ? '📒 Khách mua nợ (khách đã trả đủ)' : '📒 Khách mua nợ — ghi tên';
+      return;
+    }
+    var name = canonicalName($('custIn').value), old = name ? custOwes(name) : 0;
     info.textContent = name && old ? '📒 ' + name + ' đang nợ ' + fmt(old) : '';
     if (!name) { btn.disabled = true; btn.textContent = '📒 Ghi nợ (nhập tên khách trước)'; }
     else if (owe <= 0) { btn.disabled = true; btn.textContent = '📒 Ghi nợ (khách đã trả đủ)'; }
@@ -2445,7 +2454,17 @@
         }).catch(function () { toast('⚠️ Không ghi được nợ, thử lại'); });
       });
   }
-  $('btnPayDebt').addEventListener('click', sellOnDebt);
+  $('btnPayDebt').addEventListener('click', function () {
+    if (payCustShown) { sellOnDebt(); return; }
+    // Hiện ô tên khách để ghi nợ
+    payCustShown = true;
+    $('custBox').style.display = '';
+    $('custIn').value = '';
+    $('custChips').innerHTML = customerChipsHtml('', 8);
+    updatePay();
+    document.querySelector('#payModal .modal').scrollTop = 0;
+    setTimeout(function () { $('custIn').focus(); }, 50);
+  });
   $('custIn').addEventListener('input', function () {
     updateDebtButton(Number(digitsOnly(cashIn.value)) || 0, cartTotal);
     $('custChips').innerHTML = customerChipsHtml(this.value, 8);
@@ -2976,19 +2995,18 @@
     var shop = cleanShop({ name: $('shopNameIn').value });
     setShop(shop);
     var debt = $('optDebt').checked;
-    var cust = $('optCustomer').checked || debt;   // ghi nợ thì phải có tên khách
+    var cust = $('optCustomer').checked;   // độc lập: tạp hóa có thể chỉ bật ghi nợ
     var old = settings();
     saveSettings({ askCustomer: cust, allowDebt: debt });
     if (!cust) setCurrentCustomer('');
-    refreshDebtCache().then(renderCustBar);
+    renderCustBar();                          // hiện/ẩn nút chọn khách ngay
+    refreshDebtCache().then(renderCustBar);   // rồi cập nhật số nợ khi đọc xong sổ nợ
     closeModal(shopModal);
     toast(debt !== !!old.allowDebt ? (debt ? '📒 Đã bật ghi nợ' : 'Đã tắt ghi nợ (sổ nợ cũ vẫn giữ)')
       : cust !== !!old.askCustomer ? (cust ? '👤 Đã bật ghi tên khách khi bán' : 'Đã tắt ghi tên khách')
       : shop.name ? '🏪 Đã lưu: ' + shop.name : 'Đã lưu');
   }
   $('btnShop').addEventListener('click', openShop);
-  $('optDebt').addEventListener('change', function () { if (this.checked) $('optCustomer').checked = true; });
-  $('optCustomer').addEventListener('change', function () { if (!this.checked) $('optDebt').checked = false; });
   $('btnShopCancel').addEventListener('click', function () { closeModal(shopModal); });
   $('btnShopSave').addEventListener('click', saveShop);
   $('shopNameIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') saveShop(); });
