@@ -40,7 +40,8 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 
 - **Định dạng file sao lưu**: bản 2 mã hóa AES-GCM 256, khóa sinh bằng PBKDF2-SHA256 600.000 vòng,
   các trường `app, version, encrypted, cipher, kdf, iterations, salt, iv, data`; bên trong là
-  `{ app, version: 1, createdAt, products, photos, shop? }`. Phải luôn khôi phục được
+  `{ app, version: 1, createdAt, products, photos, shop?, orders?, orderKeepDays? }`. Khôi phục thì THAY món/ảnh,
+  còn đơn đã bán thì GỘP vào lịch sử (không xóa đơn đang có). Phải luôn khôi phục được
   cả file bản 2 lẫn file cũ bản 1 (chưa mã hóa). Đổi định dạng là các file sao lưu đã có sẽ không mở được.
 - **Tên khóa localStorage, tên/phiên bản/kho IndexedDB và cấu trúc dữ liệu ở trên**: đổi mà không có đoạn chuyển đổi là mất dữ liệu trên điện thoại.
   Giữ nguyên đoạn chuyển đổi `packName/packSize` (bản 8) sang `units`.
@@ -53,4 +54,3 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 ## Việc đang để dành
 
 - In hóa đơn qua máy in nhiệt AirPrint (Wi-Fi), tạm dừng tới khi chủ tiệm có máy in. Safari iPhone không in Bluetooth được.
-- Đưa lịch sử đơn vào file sao lưu.

@@ -765,7 +765,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 24; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 25; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1459,25 +1459,37 @@
     var d = new Date(), two = function (n) { return (n < 10 ? '0' : '') + n; };
     return 'taphoa-saoluu-' + d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + '.json';
   }
-  function buildBackupJson() {
+  // orders: toàn bộ lịch sử đơn đang giữ. shop/orders/orderKeepDays là trường thêm sau,
+  // file cũ không có thì khôi phục bỏ qua.
+  function buildBackupJson(orders) {
     var data = { app: 'taphoa', version: 1, createdAt: new Date().toISOString(), products: products, photos: {} };
-    if (getShop().name) data.shop = getShop();   // trường thêm sau, file cũ không có thì bỏ qua
+    if (getShop().name) data.shop = getShop();
     products.forEach(function (p) { if (photos[p.id]) data.photos[p.id] = photos[p.id]; });
+    data.orders = orders || [];
+    data.orderKeepDays = keepDays();
     return JSON.stringify(data);
+  }
+  function getAllOrders() {
+    return ordersStore('readonly', function (st) { return st.getAll(); });
   }
   function prepareBackup() {
     prepared = null;
     var pw = backupPw();
     if (!pw || !products.length || !window.crypto || !crypto.subtle) { preparingToken = null; updateBackupUI(); return; }
-    var token = {};
+    var token = {}, orderCount = 0;
     preparingToken = token;
     updateBackupUI();
-    encryptBackup(buildBackupJson(), pw).then(function (json) {
+    getAllOrders().then(function (orders) {
+      orders = orders || [];
+      orderCount = orders.length;
+      return encryptBackup(buildBackupJson(orders), pw);
+    }).then(function (json) {
       if (preparingToken !== token) return;
       var name = backupFileName();
       prepared = {
         file: new File([json], name, { type: 'application/json' }),
-        txt: new File([json], name.replace(/\.json$/, '.txt'), { type: 'text/plain' })
+        txt: new File([json], name.replace(/\.json$/, '.txt'), { type: 'text/plain' }),
+        orderCount: orderCount
       };
       preparingToken = null;
       updateBackupUI();
@@ -1518,7 +1530,8 @@
     try { localStorage.setItem(KEY_LAST_BACKUP, new Date().toISOString()); } catch (e) {}
     updateBackupBadge();
     closeModal(backupModal);
-    toast('✅ Đã sao lưu ' + products.length + ' món (đã khóa mật khẩu)');
+    toast('✅ Đã sao lưu ' + products.length + ' món' +
+      (prepared && prepared.orderCount ? ', ' + prepared.orderCount + ' đơn' : '') + ' (đã khóa mật khẩu)');
   }
   // Tải file về máy (dùng khi trình duyệt không có bảng chia sẻ)
   function downloadFile(file) {
@@ -1591,12 +1604,22 @@
     });
     var when = data.createdAt && !isNaN(new Date(data.createdAt)) ? fmtDateTime(new Date(data.createdAt)) : 'không rõ';
     var fileShop = cleanShop(data.shop);
+    var fileOrders = Array.isArray(data.orders) ? data.orders.map(cleanOrder).filter(Boolean) : [];
+    var fileKeep = KEEP_OPTIONS.some(function (o) { return o.days === data.orderKeepDays; }) ? data.orderKeepDays : 0;
     askConfirm('📥 Khôi phục dữ liệu?',
       'File sao lưu ngày ' + when + ':\n' + (fileShop.name ? '• Tiệm: ' + fileShop.name + '\n' : '') +
-      '• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n\n' +
-      'Danh sách hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.',
+      '• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n' +
+      (fileOrders.length ? '• ' + fileOrders.length + ' đơn đã bán\n' : '') + '\n' +
+      'Danh sách món hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.' +
+      (fileOrders.length ? '\nĐơn đã bán được GỘP vào lịch sử, đơn đang có trên máy vẫn giữ nguyên.' : ''),
       'Khôi phục', function () {
         if (fileShop.name) setShop(fileShop);
+        // Giữ lịch sử theo lựa chọn trong file nếu dài hơn, để không xóa mất đơn vừa khôi phục
+        if (fileKeep > keepDays()) { try { localStorage.setItem(KEY_KEEP_DAYS, String(fileKeep)); } catch (e) {} }
+        if (fileOrders.length) {
+          ordersStore('readwrite', function (st) { fileOrders.forEach(function (o) { st.put(o); }); })
+            .catch(function () { toast('⚠️ Không lưu được lịch sử đơn, máy có thể đã đầy bộ nhớ'); });
+        }
         products = list;
         save(KEY_PRODUCTS, products);
         pruneCart();
@@ -1610,8 +1633,26 @@
           });
         if (listScreen.classList.contains('open')) renderProductList();
         updateBackupBadge();
-        toast('✅ Đã khôi phục ' + list.length + ' món');
+        toast('✅ Đã khôi phục ' + list.length + ' món' + (fileOrders.length ? ', ' + fileOrders.length + ' đơn' : ''));
       });
+  }
+  // Chỉ nhận đơn đúng cấu trúc, bỏ dữ liệu lạ trong file
+  function cleanOrder(o) {
+    var num = function (v) { return typeof v === 'number' && isFinite(v) ? v : NaN; };
+    if (!o || !(num(o.ts) > 0) || !(num(o.total) >= 0) || !Array.isArray(o.items)) return null;
+    var items = o.items.filter(function (it) {
+      return it && typeof it.name === 'string' && num(it.qty) > 0 && num(it.price) >= 0;
+    }).map(function (it) {
+      return {
+        id: num(it.id) || 0, name: it.name, unit: typeof it.unit === 'string' ? it.unit : '',
+        unitName: typeof it.unitName === 'string' ? it.unitName : 'cái',
+        qty: it.qty, price: it.price, sub: num(it.sub) >= 0 ? it.sub : it.price * it.qty
+      };
+    });
+    return {
+      ts: o.ts, items: items, total: o.total,
+      given: num(o.given) >= 0 ? o.given : 0, change: num(o.change) >= 0 ? o.change : 0
+    };
   }
   function importBackup(file) {
     var reader = new FileReader();
