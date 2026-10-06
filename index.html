@@ -87,7 +87,7 @@
     font-size: 26px; color: #9ca3af;
   }
   .sg-item .thumb { width: 76px; height: 76px; }
-  .item .thumb { width: 92px; height: 92px; }
+  .item .thumb { width: 140px; height: 140px; border-radius: 14px; }
   .pl-item .thumb { width: 84px; height: 84px; }
   .sg-item .sg-price { font-weight: 800; color: var(--red); white-space: nowrap; }
   .sg-item mark { background: #fde047; color: inherit; border-radius: 3px; }
@@ -105,16 +105,16 @@
     background: var(--card); border-radius: 14px; padding: 12px 12px 14px;
     margin-bottom: 12px; border: 2px solid var(--line);
   }
-  .item-top { display: flex; gap: 10px; align-items: flex-start; }
-  .item-name { flex: 1; font-size: 24px; font-weight: 800; line-height: 1.25; word-break: break-word; }
-  .item-unit { color: var(--muted); font-size: 19px; margin-top: 4px; }
+  .item-top { display: flex; gap: 12px; align-items: flex-start; }
+  .item-name { flex: 1; font-size: 20px; font-weight: 800; line-height: 1.25; word-break: break-word; }
+  .item-unit { color: var(--muted); font-size: 17px; margin-top: 4px; }
   .item-unit s { color: #6b7280; }
   .item-unit .sale { color: var(--green); }
   .tag {
     display: inline-block; background: var(--green); color: #fff;
     font-size: 16px; font-weight: 800; padding: 2px 8px; border-radius: 8px; vertical-align: 2px;
   }
-  .item-next { margin-top: 4px; font-size: 18px; color: var(--green); font-weight: 700; }
+  .item-next { margin-top: 4px; font-size: 16px; color: var(--green); font-weight: 700; }
 
   /* Nhiều cách bán: 1 lon / 1 thùng */
   .sg-group { border-bottom: 2px solid var(--line); }
@@ -137,24 +137,24 @@
   }
   .chip:active { background: #dbeafe; }
   .btn-remove {
-    width: 52px; height: 52px; flex-shrink: 0; border-radius: 12px;
-    background: #fee2e2; color: var(--red-dark); font-size: 26px; font-weight: 900;
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px;
+    background: #fee2e2; color: var(--red-dark); font-size: 22px; font-weight: 900;
     border: 2px solid #fca5a5;
   }
-  .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
-  .qty { display: flex; align-items: center; gap: 8px; }
+  .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+  .qty { display: flex; align-items: center; gap: 6px; }
   .btn-qty {
-    width: 64px; height: 64px; border-radius: 14px;
-    font-size: 36px; font-weight: 900; color: #fff; line-height: 1;
+    width: 52px; height: 52px; border-radius: 12px;
+    font-size: 30px; font-weight: 900; color: #fff; line-height: 1;
   }
   .btn-minus { background: #4b5563; }
   .btn-plus { background: var(--green); }
   .qty-num {
-    min-width: 64px; height: 64px; padding: 0 6px; border-radius: 12px;
+    min-width: 52px; height: 52px; padding: 0 6px; border-radius: 12px;
     background: #fff; border: 3px solid var(--ink);
-    font-size: 30px; font-weight: 900; color: var(--ink);
+    font-size: 24px; font-weight: 900; color: var(--ink);
   }
-  .item-sub { font-size: 24px; font-weight: 900; color: var(--red); text-align: right; white-space: nowrap; }
+  .item-sub { font-size: 22px; font-weight: 900; color: var(--red); text-align: right; white-space: nowrap; }
 
   /* ---------- Footer ---------- */
   footer {
@@ -464,7 +464,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 9; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 10; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
