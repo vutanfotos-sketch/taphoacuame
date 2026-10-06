@@ -116,33 +116,26 @@
   }
   .item-next { margin-top: 4px; font-size: 18px; color: var(--green); font-weight: 700; }
 
-  /* Bán theo hộp / dây */
-  .sg-row { display: flex; border-bottom: 2px solid var(--line); }
-  .sg-row .sg-item { flex: 1; min-width: 0; border-bottom: none; }
-  .sg-pack {
-    width: 84px; flex-shrink: 0; background: #eff6ff; color: var(--blue);
-    border-left: 2px solid var(--line); font-size: 19px; font-weight: 800; line-height: 1.2;
+  /* Nhiều cách bán: 1 lon / 1 thùng */
+  .sg-group { border-bottom: 2px solid var(--line); }
+  .sg-group .sg-item { border-bottom: none; }
+  .sg-units { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 12px 12px; }
+  .sg-unit {
+    min-height: 56px; padding: 4px 14px; border-radius: 12px;
+    background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd;
+    font-size: 20px; font-weight: 800; line-height: 1.2;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  .sg-pack:active { background: #dbeafe; }
-  .sg-pack small { font-size: 15px; font-weight: 600; color: var(--muted); }
-  .item-pack { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-  .btn-pack {
-    min-height: 52px; padding: 0 14px; border-radius: 12px;
-    background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd;
-    font-size: 19px; font-weight: 800;
-  }
-  .pack-sum { font-size: 19px; font-weight: 700; color: var(--muted); }
-  .pl-pack { font-size: 17px; font-weight: 700; color: var(--blue); margin-top: 2px; }
-  .tier-row.pack-row { background: #eff6ff; border-color: #93c5fd; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .sg-unit:active { background: #dbeafe; }
+  .sg-unit small { font-size: 16px; font-weight: 700; color: var(--red); }
+  .item-unit.other { color: var(--blue); font-weight: 800; }
+  .pl-unit { font-size: 18px; font-weight: 700; color: var(--blue); margin-top: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
-    min-height: 44px; padding: 0 16px; border-radius: 22px; background: #fff;
-    border: 2px solid #93c5fd; color: var(--ink); font-size: 19px; font-weight: 700;
+    min-height: 48px; padding: 0 16px; border-radius: 24px; background: #fff;
+    border: 2px solid #93c5fd; color: var(--blue); font-size: 19px; font-weight: 800;
   }
-  .chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
-  .tier-row .pack-name { flex: 1; min-width: 0; }
-  .tier-row .pack-size { width: 64px; text-align: center; }
+  .chip:active { background: #dbeafe; }
   .btn-remove {
     width: 52px; height: 52px; flex-shrink: 0; border-radius: 12px;
     background: #fee2e2; color: var(--red-dark); font-size: 26px; font-weight: 900;
@@ -238,6 +231,17 @@
     border: 2px solid #fca5a5; font-size: 17px; font-weight: 700;
   }
   .file-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .unit-card {
+    background: #eff6ff; border: 2px solid #93c5fd; border-radius: 12px;
+    padding: 10px; margin-bottom: 10px;
+  }
+  .unit-card.main { background: #f9fafb; border-color: #9ca3af; }
+  .unit-card input {
+    width: auto; flex: 1; min-width: 0; min-height: 54px; padding: 0 10px; font-size: 24px;
+    border: 3px solid #6b7280; border-radius: 10px; outline: none; background: #fff;
+  }
+  .unit-card .btn-000 { min-width: 76px; min-height: 54px; }
+  .add-unit-label { font-size: 19px; font-weight: 700; margin: 4px 0 8px; }
   .tier-row {
     background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 10px;
   }
@@ -378,48 +382,45 @@
       <div class="error" id="nameError"></div>
     </div>
     <div class="field">
-      <label for="newPrice">Giá tiền (đồng)</label>
-      <div class="price-line">
-        <input id="newPrice" type="text" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 15.000">
-        <button class="btn-000" id="btn000" type="button">000</button>
+      <label>Giá bán</label>
+      <div class="unit-card main">
+        <div class="tier-line">1
+          <input id="mainUnit" class="unit-name" type="text" autocomplete="off" placeholder="lon, gói, chai…">
+        </div>
+        <div class="tier-line">giá
+          <input id="newPrice" class="unit-price" type="text" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 15.000">
+          <button class="btn-000" type="button">000</button>
+        </div>
       </div>
       <div class="hint" id="priceHint"></div>
       <div class="error" id="priceError"></div>
+      <div id="unitRows"></div>
+      <div class="error" id="unitError"></div>
+      <div class="add-unit-label">➕ Bán thêm theo:</div>
+      <div class="chips" id="unitChips">
+        <button class="chip" type="button">thùng</button>
+        <button class="chip" type="button">hộp</button>
+        <button class="chip" type="button">dây</button>
+        <button class="chip" type="button">lốc</button>
+        <button class="chip" type="button">két</button>
+        <button class="chip" type="button">bịch</button>
+        <button class="chip" type="button">vỉ</button>
+        <button class="chip" type="button" data-other="1">khác…</button>
+      </div>
     </div>
     <div class="field">
       <label>Giá sỉ khi mua nhiều <span class="opt">(để trống nếu không có)</span></label>
       <div class="tier-row">
         <div class="tier-line">Mua từ
           <input id="bulkMin" class="tier-min" type="text" inputmode="numeric" autocomplete="off">
-          cái trở lên</div>
+          <span class="bulk-unit">cái</span> trở lên</div>
         <div class="tier-line">giá
           <input id="bulkPrice" class="tier-price" type="text" inputmode="numeric" autocomplete="off" placeholder="Giá sỉ">
-          đ / cái
+          đ / <span class="bulk-unit">cái</span>
           <button class="tier-del" id="btnClearBulk" type="button" aria-label="Bỏ giá sỉ">✕</button></div>
       </div>
       <div class="hint" id="bulkHint"></div>
       <div class="error" id="bulkError"></div>
-    </div>
-    <div class="field">
-      <label>Bán theo hộp / dây <span class="opt">(để trống nếu không có)</span></label>
-      <div class="tier-row pack-row">
-        <div class="chips" id="packChips">
-          <button class="chip" type="button">hộp</button>
-          <button class="chip" type="button">dây</button>
-          <button class="chip" type="button">lốc</button>
-          <button class="chip" type="button">thùng</button>
-          <button class="chip" type="button">bịch</button>
-          <button class="chip" type="button">vỉ</button>
-        </div>
-        <div class="tier-line">1
-          <input id="packName" class="pack-name" type="text" autocomplete="off" placeholder="hộp, dây…">
-          =
-          <input id="packSize" class="pack-size" type="text" inputmode="numeric" autocomplete="off" placeholder="10">
-          cái
-          <button class="tier-del" id="btnClearPack" type="button" aria-label="Bỏ bán theo hộp">✕</button></div>
-      </div>
-      <div class="hint" id="packHint"></div>
-      <div class="error" id="packError"></div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnCancelAdd">Hủy</button>
@@ -463,7 +464,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 8; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 9; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -504,15 +505,38 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
   }
 
+  // Món hàng: { id, name, price, unit?, units?: [{ name, price }], bulkMin?, bulkPrice? }
+  //   price/unit = cách bán chính (vd 1 lon 15.000), units = cách bán khác (vd 1 thùng 340.000)
   var products = load(KEY_PRODUCTS, null);
   if (!Array.isArray(products)) {
     products = [];
     save(KEY_PRODUCTS, products);
   }
-  // Giỏ hàng: [{ id, qty }]
+  // Bản 8 lưu "1 dây = 12 cái"; đổi sang "1 dây = <giá cả dây>" để không mất dữ liệu đã nhập
+  var migrated = false;
+  products.forEach(function (p) {
+    if (!('packName' in p) && !('packSize' in p)) return;
+    if (p.packName && p.packSize >= 2) {
+      p.units = (p.units || []).concat([{ name: p.packName, price: unitPrice(p, p.packSize) * p.packSize }]);
+    }
+    delete p.packName;
+    delete p.packSize;
+    migrated = true;
+  });
+  if (migrated) save(KEY_PRODUCTS, products);
+
+  // Giỏ hàng: [{ id, qty, unit? }] — unit trống là cách bán chính, có tên là cách bán khác
   var cart = load(KEY_CART, []);
   if (!Array.isArray(cart)) cart = [];
-  cart = cart.filter(function (c) { return findProduct(c.id) && c.qty > 0; });
+  pruneCart();
+
+  // Bỏ các dòng trong giỏ mà món hoặc cách bán đã bị xóa/đổi tên
+  function pruneCart() {
+    cart = cart.filter(function (c) {
+      var p = findProduct(c.id);
+      return p && c.qty > 0 && (!c.unit || findUnit(p, c.unit));
+    });
+  }
 
   // ---------- Tiện ích ----------
   var money = new Intl.NumberFormat('vi-VN');
@@ -615,14 +639,18 @@
   function hasBulk(p) { return p.bulkPrice > 0 && p.bulkMin >= 2; }
   function unitPrice(p, qty) { return hasBulk(p) && qty >= p.bulkMin ? p.bulkPrice : p.price; }
 
-  // Bán theo hộp / dây: chạm "+1 dây" là thêm packSize cái một lần
-  function hasPack(p) { return !!p.packName && p.packSize >= 2; }
-  function packPrice(p) { return unitPrice(p, p.packSize) * p.packSize; }
-  function packBreakdown(p, qty) {
-    if (!hasPack(p) || qty < p.packSize) return '';
-    var n = Math.floor(qty / p.packSize), r = qty % p.packSize;
-    return '= ' + n + ' ' + p.packName + (r ? ' + ' + r + ' cái' : '');
+  // Nhiều cách bán: 1 lon / 1 thùng, mỗi cách một giá riêng do chủ tiệm ghi
+  function mainUnitName(p) { return p.unit || 'cái'; }
+  function otherUnits(p) { return p.units || []; }
+  function findUnit(p, name) {
+    return otherUnits(p).find(function (u) { return u.name === name; }) || null;
   }
+  // Giá 1 đơn vị của một dòng trong giỏ (cách bán chính thì có thể được giá sỉ)
+  function linePrice(p, unit, qty) {
+    if (unit) { var u = findUnit(p, unit); return u ? u.price : 0; }
+    return unitPrice(p, qty);
+  }
+  function sameLine(c, id, unit) { return c.id === id && (c.unit || '') === (unit || ''); }
 
   var toastTimer;
   function toast(text) {
@@ -676,20 +704,29 @@
     var html = '<div class="sg-count">' +
       (list.length ? 'Tìm thấy ' + list.length + ' món' : 'Không có món nào khớp') + '</div>';
     list.forEach(function (p) {
-      var item = '<button class="sg-item" data-id="' + p.id + '">' + thumbHtml(p, true) +
-        '<span class="sg-info"><span>' + highlight(p.name, q) + '</span>' +
-        '<span class="sg-price">' + fmt(p.price) + '</span></span></button>';
-      // Món bán theo hộp/dây: thêm nút bên phải để thêm cả hộp một lần
-      html += hasPack(p)
-        ? '<div class="sg-row">' + item + '<button class="sg-pack" data-id="' + p.id + '">+1 ' +
-          escapeHtml(p.packName) + '<small>' + p.packSize + ' cái</small></button></div>'
-        : item;
+      var units = otherUnits(p);
+      if (!units.length) {
+        html += '<button class="sg-item" data-id="' + p.id + '">' + thumbHtml(p, true) +
+          '<span class="sg-info"><span>' + highlight(p.name, q) + '</span>' +
+          '<span class="sg-price">' + fmt(p.price) + ' / ' + escapeHtml(mainUnitName(p)) + '</span></span></button>';
+        return;
+      }
+      // Món có nhiều cách bán: mỗi cách một nút (+1 lon, +1 thùng…), chạm dòng tên = cách bán chính
+      html += '<div class="sg-group"><button class="sg-item" data-id="' + p.id + '">' + thumbHtml(p, true) +
+        '<span class="sg-info"><span>' + highlight(p.name, q) + '</span></span></button>' +
+        '<div class="sg-units">' + unitButton(p, '', p.price) +
+        units.map(function (u) { return unitButton(p, u.name, u.price); }).join('') + '</div></div>';
     });
     html += '<button class="sg-item sg-new" data-new="1">➕ Thêm "' +
       escapeHtml(raw.trim()) + '" làm món mới</button>';
     suggestEl.innerHTML = html;
     suggestEl.style.display = 'block';
     suggestEl.scrollTop = 0;
+  }
+
+  function unitButton(p, unit, price) {
+    return '<button class="sg-unit" data-id="' + p.id + '" data-unit="' + escapeHtml(unit) + '">+1 ' +
+      escapeHtml(unit || mainUnitName(p)) + '<small>' + fmt(price) + '</small></button>';
   }
 
   function clearSearch() {
@@ -702,10 +739,9 @@
   clearBtn.addEventListener('click', function () { clearSearch(); searchEl.focus(); });
 
   suggestEl.addEventListener('click', function (e) {
-    var packBtn = e.target.closest('.sg-pack');
-    if (packBtn) {
-      var pp = findProduct(Number(packBtn.dataset.id));
-      if (pp) addToCart(pp.id, pp.packSize, '1 ' + pp.packName);
+    var uBtn = e.target.closest('.sg-unit');
+    if (uBtn) {
+      addToCart(Number(uBtn.dataset.id), 1, uBtn.dataset.unit);
       clearSearch();
       searchEl.blur();
       return;
@@ -732,10 +768,12 @@
   // ---------- Giỏ hàng ----------
   var cartEl = $('cart');
 
-  function addToCart(id, qty, label) {
+  // unit: '' = cách bán chính (vd lon), có tên = cách bán khác (vd thùng)
+  function addToCart(id, qty, unit) {
     var p = findProduct(id);
     if (!p) return;
-    var line = cart.find(function (c) { return c.id === id; });
+    unit = unit || '';
+    var line = cart.find(function (c) { return sameLine(c, id, unit); });
     var oldQty = line ? line.qty : 0;
     if (line) {
       line.qty += qty || 1;
@@ -744,21 +782,22 @@
       cart.unshift(line);
     } else {
       line = { id: id, qty: qty || 1 };
+      if (unit) line.unit = unit;
       cart.unshift(line);
     }
     commitCart();
-    toast('Đã thêm' + (label ? ' ' + label : '') + ': ' + p.name + ' (SL: ' + line.qty + ')' +
-      bulkNote(p, oldQty, line.qty));
+    toast('Đã thêm: ' + p.name + ' — ' + line.qty + ' ' + (unit || mainUnitName(p)) +
+      (unit ? '' : bulkNote(p, oldQty, line.qty)));
   }
 
-  function setQty(id, qty) {
-    var line = cart.find(function (c) { return c.id === id; });
+  function setQty(id, unit, qty) {
+    var line = cart.find(function (c) { return sameLine(c, id, unit); });
     if (!line) return;
     var p = findProduct(id), oldQty = line.qty;
     if (qty <= 0) cart.splice(cart.indexOf(line), 1);
     else line.qty = qty;
     commitCart();
-    var note = qty > 0 ? bulkNote(p, oldQty, qty) : '';
+    var note = qty > 0 && !unit ? bulkNote(p, oldQty, qty) : '';
     if (note) toast(note.replace(/^ · /, ''));
   }
 
@@ -766,7 +805,7 @@
   function bulkNote(p, oldQty, newQty) {
     var before = oldQty > 0 ? unitPrice(p, oldQty) : p.price;
     var after = unitPrice(p, newQty);
-    return after < before ? ' · 🏷️ Giá sỉ ' + fmt(after) + ' / cái' : '';
+    return after < before ? ' · 🏷️ Giá sỉ ' + fmt(after) + ' / ' + mainUnitName(p) : '';
   }
 
   function commitCart() {
@@ -784,34 +823,35 @@
       var html = '';
       cart.forEach(function (c) {
         var p = findProduct(c.id);
-        var unit = unitPrice(p, c.qty);
-        var sub = unit * c.qty;
+        var price = linePrice(p, c.unit, c.qty);
+        var sub = price * c.qty;
         total += sub; count += c.qty;
-        var unitHtml = unit < p.price
-          ? '<div class="item-unit"><s>' + fmt(p.price) + '</s> <b class="sale">' + fmt(unit) +
-            ' / món</b> <span class="tag">🏷️ Giá sỉ</span></div>'
-          : '<div class="item-unit">' + fmt(p.price) + ' / món</div>' +
-            (hasBulk(p) ? '<div class="item-next">Mua từ ' + p.bulkMin + ': ' + fmt(p.bulkPrice) + ' / món</div>' : '');
+        var unitName = escapeHtml(c.unit || mainUnitName(p));
+        var unitHtml;
+        if (c.unit) {
+          unitHtml = '<div class="item-unit other">' + fmt(price) + ' / ' + unitName + '</div>';
+        } else if (price < p.price) {
+          unitHtml = '<div class="item-unit"><s>' + fmt(p.price) + '</s> <b class="sale">' + fmt(price) +
+            ' / ' + unitName + '</b> <span class="tag">🏷️ Giá sỉ</span></div>';
+        } else {
+          unitHtml = '<div class="item-unit">' + fmt(p.price) + ' / ' + unitName + '</div>' +
+            (hasBulk(p) ? '<div class="item-next">Mua từ ' + p.bulkMin + ': ' + fmt(p.bulkPrice) + ' / ' + unitName + '</div>' : '');
+        }
+        var key = 'data-id="' + c.id + '" data-unit="' + escapeHtml(c.unit || '') + '"';
         html += '<div class="item">' +
           '<div class="item-top">' + thumbHtml(p, false) +
             '<div style="flex:1;min-width:0"><div class="item-name">' + escapeHtml(p.name) + '</div>' +
             unitHtml + '</div>' +
-            '<button class="btn-remove" data-act="remove" data-id="' + c.id + '" aria-label="Bỏ món">✕</button>' +
+            '<button class="btn-remove" data-act="remove" ' + key + ' aria-label="Bỏ món">✕</button>' +
           '</div>' +
           '<div class="item-bottom">' +
             '<div class="qty">' +
-              '<button class="btn-qty btn-minus" data-act="minus" data-id="' + c.id + '" aria-label="Bớt">−</button>' +
-              '<button class="qty-num" data-act="type" data-id="' + c.id + '" aria-label="Nhập số lượng">' + c.qty + '</button>' +
-              '<button class="btn-qty btn-plus" data-act="plus" data-id="' + c.id + '" aria-label="Thêm">+</button>' +
+              '<button class="btn-qty btn-minus" data-act="minus" ' + key + ' aria-label="Bớt">−</button>' +
+              '<button class="qty-num" data-act="type" ' + key + ' aria-label="Nhập số lượng">' + c.qty + '</button>' +
+              '<button class="btn-qty btn-plus" data-act="plus" ' + key + ' aria-label="Thêm">+</button>' +
             '</div>' +
             '<div class="item-sub">' + fmt(sub) + '</div>' +
-          '</div>' +
-          (hasPack(p)
-            ? '<div class="item-pack"><button class="btn-pack" data-act="pack" data-id="' + c.id + '">➕ 1 ' +
-              escapeHtml(p.packName) + ' (' + p.packSize + ' cái)</button>' +
-              '<span class="pack-sum">' + escapeHtml(packBreakdown(p, c.qty)) + '</span></div>'
-            : '') +
-          '</div>';
+          '</div></div>';
       });
       cartEl.innerHTML = html;
     }
@@ -824,15 +864,14 @@
   cartEl.addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-act]');
     if (!btn) return;
-    var id = Number(btn.dataset.id);
-    var line = cart.find(function (c) { return c.id === id; });
+    var id = Number(btn.dataset.id), unit = btn.dataset.unit || '';
+    var line = cart.find(function (c) { return sameLine(c, id, unit); });
     if (!line) return;
     var act = btn.dataset.act;
-    if (act === 'plus') setQty(id, line.qty + 1);
-    else if (act === 'minus') setQty(id, line.qty - 1);
-    else if (act === 'remove') setQty(id, 0);
-    else if (act === 'type') openQtyModal(id);
-    else if (act === 'pack') setQty(id, line.qty + findProduct(id).packSize);
+    if (act === 'plus') setQty(id, unit, line.qty + 1);
+    else if (act === 'minus') setQty(id, unit, line.qty - 1);
+    else if (act === 'remove') setQty(id, unit, 0);
+    else if (act === 'type') openQtyModal(id, unit);
   });
 
   // ---------- Popup chung ----------
@@ -887,9 +926,11 @@
     list.forEach(function (p) {
       html += '<button class="pl-item" data-id="' + p.id + '">' + thumbHtml(p, true) +
         '<div class="pl-info"><div class="pl-name">' + (q ? highlight(p.name, q) : escapeHtml(p.name)) + '</div>' +
-        '<div class="pl-price">' + fmt(p.price) + '</div>' +
-        (hasBulk(p) ? '<div class="pl-tiers">🏷️ Từ ' + p.bulkMin + ' cái: ' + fmt(p.bulkPrice) + '</div>' : '') +
-        (hasPack(p) ? '<div class="pl-pack">📦 1 ' + escapeHtml(p.packName) + ' = ' + p.packSize + ' cái · ' + fmt(packPrice(p)) + '</div>' : '') +
+        '<div class="pl-price">' + fmt(p.price) + ' / ' + escapeHtml(mainUnitName(p)) + '</div>' +
+        otherUnits(p).map(function (u) {
+          return '<div class="pl-unit">📦 1 ' + escapeHtml(u.name) + ': ' + fmt(u.price) + '</div>';
+        }).join('') +
+        (hasBulk(p) ? '<div class="pl-tiers">🏷️ Từ ' + p.bulkMin + ' ' + escapeHtml(mainUnitName(p)) + ': ' + fmt(p.bulkPrice) + '</div>' : '') +
         '</div>' +
         '<span class="pl-edit">✏️ Sửa</span></button>';
     });
@@ -922,7 +963,7 @@
   function untouchedSamples() {
     return products.filter(function (p) {
       var s = SAMPLE_PRODUCTS.find(function (x) { return x.id === p.id; });
-      return s && s.name === p.name && s.price === p.price && !hasBulk(p) && !hasPack(p) && !photos[p.id];
+      return s && s.name === p.name && s.price === p.price && !hasBulk(p) && !p.unit && !otherUnits(p).length && !photos[p.id];
     });
   }
 
@@ -953,6 +994,7 @@
   // ---------- Thêm / sửa món ----------
   var addModal = $('addModal');
   var nameIn = $('newName'), priceIn = $('newPrice');
+  var mainUnitIn = $('mainUnit'), unitRowsEl = $('unitRows');
   var bulkMinIn = $('bulkMin'), bulkPriceIn = $('bulkPrice');
   var addToCartAfterSave = false;
   var editingId = null; // null = đang thêm món mới
@@ -1000,8 +1042,8 @@
     var d = digitsOnly(priceIn.value).replace(/^0+/, '');
     priceIn.value = d ? money.format(Number(d)) : '';
     var old = editingId !== null && findProduct(editingId);
-    $('priceHint').innerHTML = (d ? 'Giá: <b>' + fmt(Number(d)) + '</b>' : '') +
-      (old ? '<br>Giá cũ: ' + fmt(old.price) : '');
+    // Chỉ nhắc giá cũ khi đã gõ giá khác, cho gọn
+    $('priceHint').innerHTML = old && d && Number(d) !== old.price ? 'Giá cũ: ' + fmt(old.price) : '';
     updateBulkHint();
   }
 
@@ -1013,52 +1055,66 @@
     bulkPriceIn.value = bd ? money.format(Number(bd)) : '';
     var price = Number(digitsOnly(priceIn.value));
     var bp = Number(bd);
+    var un = mainUnitIn.value.trim() || 'cái';
+    document.querySelectorAll('.bulk-unit').forEach(function (el) { el.textContent = un; });
     $('bulkHint').innerHTML = bm >= 2 && bp > 0 && price > bp
-      ? 'Khách mua ' + bm + ' cái: <b>' + fmt(bp * bm) + '</b> (giá lẻ là ' + fmt(price * bm) + ')'
+      ? 'Khách mua ' + bm + ' ' + escapeHtml(un) + ': <b>' + fmt(bp * bm) + '</b> (giá lẻ là ' + fmt(price * bm) + ')'
       : '';
-    updatePackHint();
   }
   bulkMinIn.addEventListener('input', updateBulkHint);
   bulkPriceIn.addEventListener('input', updateBulkHint);
+  mainUnitIn.addEventListener('input', updateBulkHint);
   $('btnClearBulk').addEventListener('click', function () {
     bulkMinIn.value = '2';
     bulkPriceIn.value = '';
     updateBulkHint();
   });
 
-  // Bán theo hộp / dây
-  var packNameIn = $('packName'), packSizeIn = $('packSize');
-  function updatePackHint() {
-    var name = packNameIn.value.trim();
-    var size = Number(digitsOnly(packSizeIn.value)) || 0;
-    packSizeIn.value = size ? String(size) : '';
-    document.querySelectorAll('#packChips .chip').forEach(function (ch) {
-      ch.classList.toggle('on', ch.textContent === name);
-    });
-    var price = Number(digitsOnly(priceIn.value));
-    var bm = Number(digitsOnly(bulkMinIn.value)) || 0;
-    var bp = Number(digitsOnly(bulkPriceIn.value)) || 0;
-    var bulkApplies = bp > 0 && bm >= 2 && bp < price && size >= bm;
-    var unit = bulkApplies ? bp : price;
-    $('packHint').innerHTML = name && size >= 2 && price
-      ? 'Chạm "+1 ' + escapeHtml(name) + '" là thêm ' + size + ' cái. 1 ' + escapeHtml(name) +
-        ' = <b>' + fmt(unit * size) + '</b>' +
-        (bulkApplies ? ' (giá sỉ)' : '<br>Muốn bán cả ' + escapeHtml(name) + ' rẻ hơn: đặt giá sỉ từ ' + size + ' cái ở trên.')
-      : '';
+  // Cách bán khác: 1 thùng, 1 hộp… mỗi dòng ghi thẳng một giá
+  var MAX_UNITS = 5;
+  function addUnitRow(name, price) {
+    if (unitRowsEl.children.length >= MAX_UNITS) {
+      toast('Tối đa ' + MAX_UNITS + ' cách bán khác');
+      return null;
+    }
+    var row = document.createElement('div');
+    row.className = 'unit-card';
+    row.innerHTML =
+      '<div class="tier-line">1 <input class="unit-name" type="text" autocomplete="off" placeholder="thùng, hộp…">' +
+      '<button class="tier-del" type="button" aria-label="Bỏ cách bán này">✕</button></div>' +
+      '<div class="tier-line">giá <input class="unit-price" type="text" inputmode="numeric" autocomplete="off" placeholder="Giá">' +
+      '<button class="btn-000" type="button">000</button></div>';
+    row.querySelector('.unit-name').value = name || '';
+    row.querySelector('.unit-price').value = price ? money.format(price) : '';
+    unitRowsEl.appendChild(row);
+    return row;
   }
-  $('packChips').addEventListener('click', function (e) {
+  $('unitChips').addEventListener('click', function (e) {
     var ch = e.target.closest('.chip');
     if (!ch) return;
-    packNameIn.value = ch.textContent;
-    updatePackHint();
-    if (!packSizeIn.value) packSizeIn.focus();
+    var row = addUnitRow(ch.dataset.other ? '' : ch.textContent.trim(), 0);
+    if (row) row.querySelector(ch.dataset.other ? '.unit-name' : '.unit-price').focus();
   });
-  packNameIn.addEventListener('input', updatePackHint);
-  packSizeIn.addEventListener('input', updatePackHint);
-  $('btnClearPack').addEventListener('click', function () {
-    packNameIn.value = '';
-    packSizeIn.value = '';
-    updatePackHint();
+  unitRowsEl.addEventListener('click', function (e) {
+    var del = e.target.closest('.tier-del');
+    if (del) del.closest('.unit-card').remove();
+  });
+  unitRowsEl.addEventListener('input', function (e) {
+    if (!e.target.classList.contains('unit-price')) return;
+    var d = digitsOnly(e.target.value).replace(/^0+/, '');
+    e.target.value = d ? money.format(Number(d)) : '';
+  });
+  // Nút 000 cạnh mỗi ô giá: gõ 15 rồi bấm 000 thành 15.000
+  addModal.addEventListener('click', function (e) {
+    var b = e.target.closest('.btn-000');
+    if (!b) return;
+    var input = b.parentNode.querySelector('input');
+    var d = digitsOnly(input.value);
+    if (d && d.length < 10) {
+      input.value = d + '000';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    input.focus();
   });
 
   function openProductModal(product, prefillName, thenAddToCart) {
@@ -1073,12 +1129,12 @@
     var bulk = product && hasBulk(product);
     bulkMinIn.value = bulk ? String(product.bulkMin) : '2';
     bulkPriceIn.value = bulk ? String(product.bulkPrice) : '';
-    var pack = product && hasPack(product);
-    packNameIn.value = pack ? product.packName : '';
-    packSizeIn.value = pack ? String(product.packSize) : '';
+    mainUnitIn.value = product && product.unit ? product.unit : '';
+    unitRowsEl.innerHTML = '';
+    if (product) otherUnits(product).forEach(function (u) { addUnitRow(u.name, u.price); });
     updatePriceHint();
-    ['nameError', 'priceError', 'bulkError', 'packError'].forEach(function (id) { $(id).textContent = ''; });
-    [nameIn, priceIn, bulkMinIn, bulkPriceIn, packNameIn, packSizeIn].forEach(function (el) { el.classList.remove('invalid'); });
+    ['nameError', 'priceError', 'bulkError', 'unitError'].forEach(function (id) { $(id).textContent = ''; });
+    [nameIn, priceIn, bulkMinIn, bulkPriceIn, mainUnitIn].forEach(function (el) { el.classList.remove('invalid'); });
     openModal(addModal);
     setTimeout(function () {
       if (product || prefillName) { priceIn.focus(); priceIn.select(); }
@@ -1092,39 +1148,44 @@
   }
 
   priceIn.addEventListener('input', updatePriceHint);
-  $('btn000').addEventListener('click', function () {
-    var d = digitsOnly(priceIn.value);
-    if (d && d.length < 10) { priceIn.value = d + '000'; updatePriceHint(); }
-    priceIn.focus();
-  });
 
   function saveProduct() {
     var name = nameIn.value.trim().replace(/\s+/g, ' ');
     var price = Number(digitsOnly(priceIn.value));
     var bulkMin = Number(digitsOnly(bulkMinIn.value)) || 0;
     var bulkPrice = Number(digitsOnly(bulkPriceIn.value)) || 0;
-    var packName = packNameIn.value.trim().replace(/\s+/g, ' ');
-    var packSize = Number(digitsOnly(packSizeIn.value)) || 0;
+    var mainUnit = mainUnitIn.value.trim().replace(/\s+/g, ' ');
+    var unitLabel = mainUnit || 'cái';
     var ok = true;
 
-    ['nameError', 'priceError', 'bulkError', 'packError'].forEach(function (id) { $(id).textContent = ''; });
-    [nameIn, priceIn, bulkMinIn, bulkPriceIn, packNameIn, packSizeIn].forEach(function (el) { el.classList.remove('invalid'); });
+    ['nameError', 'priceError', 'bulkError', 'unitError'].forEach(function (id) { $(id).textContent = ''; });
+    [nameIn, priceIn, bulkMinIn, bulkPriceIn, mainUnitIn].forEach(function (el) { el.classList.remove('invalid'); });
 
-    // Hộp / dây: để trống cả hai ô nghĩa là món này chỉ bán lẻ
-    if (packName || packSize) {
-      if (!packName) {
-        $('packError').textContent = 'Chọn tên: hộp, dây, lốc, thùng…';
-        packNameIn.classList.add('invalid'); ok = false;
-      } else if (packSize < 2) {
-        $('packError').textContent = 'Nhập 1 ' + packName + ' có mấy cái (từ 2 trở lên).';
-        packSizeIn.classList.add('invalid'); ok = false;
+    // Cách bán khác (thùng, hộp…): dòng để trống cả tên lẫn giá thì bỏ qua
+    var units = [], seen = [plain(unitLabel)];
+    unitRowsEl.querySelectorAll('.unit-card').forEach(function (row) {
+      var ni = row.querySelector('.unit-name'), pi = row.querySelector('.unit-price');
+      ni.classList.remove('invalid');
+      pi.classList.remove('invalid');
+      var un = ni.value.trim().replace(/\s+/g, ' '), up = Number(digitsOnly(pi.value)) || 0;
+      if (!un && !up) return;
+      var err = '';
+      if (!un) { err = 'Ghi tên cách bán: thùng, hộp, dây…'; ni.classList.add('invalid'); }
+      else if (!up) { err = 'Nhập giá cho 1 ' + un + '.'; pi.classList.add('invalid'); }
+      else if (seen.indexOf(plain(un)) >= 0) { err = 'Cách bán "' + un + '" bị trùng.'; ni.classList.add('invalid'); }
+      if (err) {
+        if (!$('unitError').textContent) $('unitError').textContent = err;
+        ok = false;
+        return;
       }
-    }
+      seen.push(plain(un));
+      units.push({ name: un, price: up });
+    });
 
     // Giá sỉ: để trống ô giá sỉ nghĩa là món này không có giá sỉ
     if (bulkPrice) {
       if (bulkMin < 2) {
-        $('bulkError').textContent = 'Số lượng mua sỉ phải từ 2 cái trở lên.';
+        $('bulkError').textContent = 'Số lượng mua sỉ phải từ 2 ' + unitLabel + ' trở lên.';
         bulkMinIn.classList.add('invalid'); ok = false;
       } else if (price && bulkPrice >= price) {
         $('bulkError').textContent = 'Giá sỉ phải thấp hơn giá lẻ (' + fmt(price) + ').';
@@ -1140,7 +1201,7 @@
       nameIn.classList.add('invalid'); ok = false;
     }
     if (!price || price <= 0) {
-      $('priceError').textContent = 'Vui lòng nhập giá tiền lớn hơn 0.';
+      $('priceError').textContent = 'Vui lòng nhập giá cho 1 ' + unitLabel + '.';
       priceIn.classList.add('invalid'); ok = false;
     }
     if (!ok) return;
@@ -1148,8 +1209,8 @@
     function applyBulk(p) {
       if (bulkPrice) { p.bulkMin = bulkMin; p.bulkPrice = bulkPrice; }
       else { delete p.bulkMin; delete p.bulkPrice; }
-      if (packName) { p.packName = packName; p.packSize = packSize; }
-      else { delete p.packName; delete p.packSize; }
+      if (mainUnit) p.unit = mainUnit; else delete p.unit;
+      if (units.length) p.units = units; else delete p.units;
     }
 
     if (editingId !== null) {
@@ -1161,9 +1222,10 @@
       applyPhoto(edited.id);
       save(KEY_PRODUCTS, products);
       closeModal(addModal);
-      renderCart();
+      pruneCart();
+      commitCart();
       if (listScreen.classList.contains('open')) renderProductList();
-      toast('Đã sửa: ' + name + ' – ' + fmt(price));
+      toast('Đã sửa: ' + name);
       return;
     }
 
@@ -1205,21 +1267,25 @@
 
   // ---------- Nhập số lượng ----------
   var qtyModal = $('qtyModal'), qtyIn = $('qtyInput');
-  var qtyEditingId = null;
+  var qtyEditingId = null, qtyEditingUnit = '';
 
   function updateQtyHint() {
     var p = findProduct(qtyEditingId);
     var q = Number(digitsOnly(qtyIn.value)) || 0;
     qtyIn.value = q ? String(q) : '';
-    $('qtyHint').innerHTML = p && q ? 'Thành tiền: <b>' + fmt(unitPrice(p, q) * q) + '</b>' +
-      (unitPrice(p, q) < p.price ? ' (giá sỉ ' + fmt(p.bulkPrice) + ' / cái)' : '') : '';
+    if (!p || !q) { $('qtyHint').innerHTML = ''; return; }
+    var price = linePrice(p, qtyEditingUnit, q);
+    $('qtyHint').innerHTML = 'Thành tiền: <b>' + fmt(price * q) + '</b>' +
+      (!qtyEditingUnit && price < p.price ? ' (giá sỉ ' + fmt(price) + ' / ' + escapeHtml(mainUnitName(p)) + ')' : '');
   }
-  function openQtyModal(id) {
+  function openQtyModal(id, unit) {
+    unit = unit || '';
     var p = findProduct(id);
-    var line = cart.find(function (c) { return c.id === id; });
+    var line = cart.find(function (c) { return sameLine(c, id, unit); });
     if (!p || !line) return;
     qtyEditingId = id;
-    $('qtyLabel').textContent = p.name + ' (' + fmt(p.price) + ')';
+    qtyEditingUnit = unit;
+    $('qtyLabel').textContent = p.name + ' (' + fmt(linePrice(p, unit, 1)) + ' / ' + (unit || mainUnitName(p)) + ')';
     qtyIn.value = String(line.qty);
     updateQtyHint();
     openModal(qtyModal);
@@ -1228,7 +1294,7 @@
   function saveQty() {
     var q = Number(digitsOnly(qtyIn.value)) || 0;
     if (q > 9999) q = 9999;
-    setQty(qtyEditingId, q);
+    setQty(qtyEditingId, qtyEditingUnit, q);
     closeModal(qtyModal);
   }
   qtyIn.addEventListener('input', updateQtyHint);
