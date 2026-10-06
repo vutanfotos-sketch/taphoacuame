@@ -151,7 +151,10 @@
   }
   @media (min-width: 600px) { .overlay { align-items: center; } .modal { border-radius: 20px; } }
   .modal h2 { font-size: 26px; margin-bottom: 16px; }
-  .modal p.msg { font-size: 22px; line-height: 1.45; margin-bottom: 20px; }
+  .modal p.msg {
+    font-size: 22px; line-height: 1.45; margin-bottom: 20px;
+    white-space: pre-line; max-height: 50vh; overflow-y: auto;
+  }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-weight: 800; margin-bottom: 6px; font-size: 21px; }
   .field input {
@@ -231,6 +234,15 @@
   .pl-name mark { background: #fde047; color: inherit; border-radius: 3px; }
   .pl-price { font-size: 22px; font-weight: 900; color: var(--red); margin-top: 2px; }
   .pl-tiers { font-size: 17px; font-weight: 700; color: var(--green); margin-top: 2px; }
+  .sample-box {
+    background: #fffbeb; border: 2px solid #fcd34d; border-radius: 14px;
+    padding: 12px; margin-bottom: 12px; font-size: 20px; line-height: 1.4;
+  }
+  .btn-samples {
+    width: 100%; min-height: 56px; margin-top: 10px; border-radius: 12px;
+    background: #fff; color: var(--ink); border: 2px solid #f59e0b;
+    font-size: 20px; font-weight: 800;
+  }
   .pl-edit {
     flex-shrink: 0; background: var(--blue); color: #fff; font-size: 19px; font-weight: 800;
     padding: 12px 14px; border-radius: 12px;
@@ -357,11 +369,14 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 5; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 6; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
-  var DEFAULT_PRODUCTS = [
+  // 20 món mẫu cài sẵn ở các bản trước. Máy mới không còn được thêm sẵn các món này;
+  // danh sách chỉ giữ lại để nhận ra món mẫu chưa sửa khi bấm "Xóa các món mẫu".
+  var FIRST_USER_ID = 21; // món chủ tiệm tự thêm luôn mang số từ 21 trở đi
+  var SAMPLE_PRODUCTS = [
     { id: 1,  name: 'Mì Hảo Hảo (gói)',            price: 4500 },
     { id: 2,  name: 'Nước mắm Nam Ngư 500ml',      price: 38000 },
     { id: 3,  name: 'Dầu ăn Simply 1 lít',         price: 62000 },
@@ -397,7 +412,7 @@
 
   var products = load(KEY_PRODUCTS, null);
   if (!Array.isArray(products)) {
-    products = DEFAULT_PRODUCTS.slice();
+    products = [];
     save(KEY_PRODUCTS, products);
   }
   // Giỏ hàng: [{ id, qty }]
@@ -662,7 +677,13 @@
       return a.name.localeCompare(b.name, 'vi');
     });
     var html = '<div class="pl-tip">' + products.length + ' món · Chạm vào món để sửa giá · Phiên bản ' + APP_VERSION + '</div>';
-    if (!list.length) html += '<div class="empty">Không có món nào khớp.</div>';
+    var samples = untouchedSamples();
+    if (samples.length && !q) {
+      html += '<div class="sample-box">Còn <b>' + samples.length + ' món mẫu</b> do app cài sẵn.' +
+        '<button class="btn-samples" id="btnDelSamples">🧹 Xóa các món mẫu</button></div>';
+    }
+    if (!products.length) html += '<div class="empty">Chưa có món nào.<br>Bấm "➕ Thêm món" để thêm.</div>';
+    else if (!list.length) html += '<div class="empty">Không có món nào khớp.</div>';
     list.forEach(function (p) {
       html += '<button class="pl-item" data-id="' + p.id + '">' +
         '<div class="pl-info"><div class="pl-name">' + (q ? highlight(p.name, q) : escapeHtml(p.name)) + '</div>' +
@@ -691,9 +712,41 @@
   $('btnCloseList').addEventListener('click', closeListScreen);
   plSearchEl.addEventListener('input', renderProductList);
   plListEl.addEventListener('click', function (e) {
+    if (e.target.closest('#btnDelSamples')) { deleteSamples(); return; }
     var btn = e.target.closest('.pl-item');
     if (btn) openEditModal(Number(btn.dataset.id));
   });
+
+  // Món mẫu còn nguyên như lúc cài (chưa sửa tên, giá, chưa đặt giá sỉ)
+  function untouchedSamples() {
+    return products.filter(function (p) {
+      var s = SAMPLE_PRODUCTS.find(function (x) { return x.id === p.id; });
+      return s && s.name === p.name && s.price === p.price && !hasBulk(p);
+    });
+  }
+
+  function deleteSamples() {
+    var samples = untouchedSamples();
+    if (!samples.length) return;
+    var kept = products.filter(function (p) { return p.id < FIRST_USER_ID && samples.indexOf(p) < 0; });
+    var own = products.filter(function (p) { return p.id >= FIRST_USER_ID; });
+    var msg = 'Sẽ xóa ' + samples.length + ' món mẫu:\n' +
+      samples.map(function (p) { return '• ' + p.name; }).join('\n');
+    if (kept.length) {
+      msg += '\n\nGiữ lại ' + kept.length + ' món mẫu bạn đã sửa:\n' +
+        kept.map(function (p) { return '• ' + p.name; }).join('\n');
+    }
+    msg += '\n\nGiữ nguyên ' + own.length + ' món bạn tự thêm.';
+    askConfirm('🧹 Xóa các món mẫu?', msg, 'Xóa món mẫu', function () {
+      var ids = samples.map(function (p) { return p.id; });
+      products = products.filter(function (p) { return ids.indexOf(p.id) < 0; });
+      cart = cart.filter(function (c) { return ids.indexOf(c.id) < 0; });
+      save(KEY_PRODUCTS, products);
+      commitCart();
+      renderProductList();
+      toast('Đã xóa ' + ids.length + ' món mẫu');
+    });
+  }
 
   // ---------- Thêm / sửa món ----------
   var addModal = $('addModal');
@@ -820,7 +873,7 @@
       return;
     }
 
-    var maxId = products.reduce(function (m, p) { return Math.max(m, p.id); }, 0);
+    var maxId = products.reduce(function (m, p) { return Math.max(m, p.id); }, FIRST_USER_ID - 1);
     var product = { id: maxId + 1, name: name, price: price };
     applyBulk(product);
     products.push(product);
