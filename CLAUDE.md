@@ -54,6 +54,9 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 - **Tên khóa localStorage, tên/phiên bản/kho IndexedDB và cấu trúc dữ liệu ở trên**: đổi mà không có đoạn chuyển đổi là mất dữ liệu trên điện thoại.
   Giữ nguyên đoạn chuyển đổi `packName/packSize` (bản 8) sang `units`.
 - **Không bao giờ đưa dữ liệu tiệm, file sao lưu (`taphoa-saoluu-*`, đã có trong `.gitignore`) hay mật khẩu lên repo**, vì repo public.
+- **Không đổi repo sang private**: tài khoản miễn phí thì GitHub Pages chỉ chạy với repo public, khóa repo là link app ngừng chạy.
+  Đổi chỗ chạy app (domain khác) cũng làm mất dữ liệu trên điện thoại (dữ liệu gắn với địa chỉ trang), phải sao lưu/khôi phục từng máy.
+  Chủ tiệm đã chọn giữ nguyên public.
 - Không thêm lại việc tự nạp món mẫu cho máy mới (máy mới bắt đầu với danh sách trống).
 - Không bỏ các popup hỏi lại trước khi xóa đơn, xóa món, khôi phục, rút ngắn thời gian lưu lịch sử.
 - Đơn lưu vào lịch sử phải đi qua popup tiền thối (có `given`, `change`, `ts` chính xác). Nút "Đơn mới" chỉ
