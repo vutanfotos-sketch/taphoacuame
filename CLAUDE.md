@@ -34,7 +34,7 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
   chọn trước khi chọn hàng).
 - IndexedDB `taphoa` phiên bản 3: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
   kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm),
-  kho `debts` (keyPath `ts`, sổ nợ `{ ts, customer, type: 'no'|'tra', amount, orderTs? }`; nợ của khách = tổng `no` − tổng `tra`,
+  kho `debts` (keyPath `ts`, sổ nợ `{ ts, customer, type: 'no'|'tra', amount, orderTs?, total?, paid? }`; nợ của khách = tổng `no` − tổng `tra`,
   gộp theo `plain(tên)`). Sổ nợ KHÔNG bị xóa theo thời gian giữ lịch sử.
 - Đơn: `{ ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change, customer?, debt? }`
   (`debt` = phần ghi nợ; xóa/mở lại đơn có `debt` thì xóa luôn dòng `no` có `orderTs` trùng, trong cùng một giao dịch).

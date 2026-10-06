@@ -889,7 +889,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 30; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 31; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1798,6 +1798,8 @@
     if (!name) return null;
     var out = { ts: d.ts, customer: name, type: d.type, amount: d.amount };
     if (typeof d.orderTs === 'number') out.orderTs = d.orderTs;
+    if (typeof d.total === 'number' && d.total > 0) out.total = d.total;
+    if (typeof d.paid === 'number' && d.paid >= 0) out.paid = d.paid;
     return out;
   }
   function importBackup(file) {
@@ -2428,7 +2430,7 @@
         order.change = 0;
         order.customer = name;
         order.debt = owe;
-        var entry = { ts: uniqueTs(), customer: name, type: 'no', amount: owe, orderTs: order.ts };
+        var entry = { ts: uniqueTs(), customer: name, type: 'no', amount: owe, orderTs: order.ts, total: total, paid: given };
         dbTx(['orders', 'debts'], 'readwrite', function (tx) {
           tx.objectStore('orders').put(order);
           tx.objectStore('debts').put(entry);
@@ -2485,7 +2487,10 @@
     if (open) {
       html += '<div class="debt-rows">' + g.entries.slice().reverse().map(function (d) {
         return '<div class="debt-row"><span class="t">' + fullTime(d.ts) + '</span>' +
-          '<span class="a ' + d.type + '">' + (d.type === 'no' ? '+ Mua nợ ' : '− Đã trả ') + fmt(d.amount) + '</span>' +
+          '<span class="a ' + d.type + '">' + (d.type === 'no' ? '+ Nợ ' : '− Đã trả ') + fmt(d.amount) +
+            (d.type === 'no' && d.total > 0
+              ? '<br><small style="font-weight:600;color:var(--muted)">mua ' + money.format(d.total) + ', trả ' + money.format(d.paid || 0) + '</small>'
+              : '') + '</span>' +
           (d.type === 'tra' ? '<button class="x" type="button" data-ddel="' + d.ts + '" aria-label="Xóa lần trả này">✕</button>' : '') +
           '</div>';
       }).join('') + '</div>';
