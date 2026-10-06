@@ -252,11 +252,16 @@
     background: #fff; border: 2px solid var(--line); border-radius: 14px;
     padding: 12px; margin-bottom: 10px;
   }
-  .order-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-  .order-time { font-size: 19px; font-weight: 800; color: var(--muted); }
-  .order-total { font-size: 24px; font-weight: 900; color: var(--red); }
   .order-items { font-size: 18px; line-height: 1.45; margin-top: 6px; }
   .order-pay { font-size: 16px; color: var(--muted); margin-top: 4px; }
+  .order-when { font-size: 17px; font-weight: 800; color: var(--muted); margin-bottom: 6px; }
+  /* Phần tiền của đơn: tổng / khách đưa / thối lại, giống tờ hóa đơn */
+  .order-money { border-top: 2px dashed #d1d5db; margin-top: 8px; padding-top: 6px; }
+  .order-money .r { display: flex; justify-content: space-between; gap: 10px; font-size: 18px; padding: 1px 0; }
+  .order-money .r b { white-space: nowrap; }
+  .order-money .r.total b { font-size: 22px; color: var(--red); }
+  .order-money .r.change b { color: var(--green); }
+  .order-money .r.none { color: var(--muted); font-size: 16px; }
   .order-btns { display: flex; gap: 8px; margin-top: 10px; }
   .order-btns button {
     flex: 1; min-height: 46px; border-radius: 10px; font-size: 17px; font-weight: 800;
@@ -450,6 +455,7 @@
   .btn-big.save { background: var(--green); color: #fff; }
   .btn-big.restore { background: #fff; color: var(--blue); border: 2px solid var(--blue); }
   .btn-big.close { background: #e5e7eb; color: var(--ink); margin-bottom: 0; }
+  .btn-big.discard { background: #fff; color: var(--red); border: 2px solid var(--red); font-size: 20px; }
   .btn-big:disabled { opacity: .6; }
   .backup-lock {
     background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px;
@@ -730,6 +736,17 @@
   </div>
 </div>
 
+<!-- Popup "Đơn mới": bán xong thì tính tiền & lưu đơn, khách không mua thì xóa -->
+<div class="overlay" id="endModal">
+  <div class="modal" role="dialog" aria-labelledby="endTitle">
+    <h2 id="endTitle">🗑️ Đơn mới</h2>
+    <p class="msg" id="endMsg"></p>
+    <button class="btn-big save" id="btnEndPay">💵 Đã bán — tính tiền thối</button>
+    <button class="btn-big discard" id="btnEndDiscard">🗑️ Không mua — xóa đơn</button>
+    <button class="btn-big close" id="btnEndBack">Quay lại</button>
+  </div>
+</div>
+
 <!-- Popup xác nhận -->
 <div class="overlay" id="confirmModal">
   <div class="modal" role="alertdialog">
@@ -748,7 +765,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 23; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 24; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -2126,15 +2143,18 @@
       var html = '<div class="hist-sum"><b>' + shownOrders.length + '</b> đơn · Doanh thu <b>' + fmt(revenue) + '</b></div>';
       if (!shownOrders.length) html += '<div class="empty">Chưa có đơn nào trong ngày này.</div>';
       shownOrders.forEach(function (o) {
-        var t = new Date(o.ts);
         html += '<div class="order">' +
-          '<div class="order-top"><span class="order-time">🕒 ' + two(t.getHours()) + ':' + two(t.getMinutes()) +
-          ' · ' + two(t.getDate()) + '/' + two(t.getMonth() + 1) + '/' + t.getFullYear() + '</span>' +
-          '<b class="order-total">' + fmt(o.total) + '</b></div>' +
+          '<div class="order-when">🕒 ' + fullTime(o.ts) + '</div>' +
           '<div class="order-items">' + o.items.map(function (it) {
             return escapeHtml(it.qty + ' ' + it.unitName + ' ' + it.name) + ' <span style="color:var(--muted)">(' + fmt(it.sub) + ')</span>';
           }).join('<br>') + '</div>' +
-          (o.given ? '<div class="order-pay">Khách đưa ' + fmt(o.given) + ' · thối ' + fmt(o.change) + '</div>' : '') +
+          '<div class="order-money">' +
+            '<div class="r total"><span>Tổng đơn</span><b>' + fmt(o.total) + '</b></div>' +
+            (o.given
+              ? '<div class="r"><span>💵 Khách đưa</span><b>' + fmt(o.given) + '</b></div>' +
+                '<div class="r change"><span>Thối lại</span><b>' + fmt(o.change) + '</b></div>'
+              : '<div class="r none">Không ghi tiền khách đưa</div>') +
+          '</div>' +
           '<div class="order-btns">' +
             '<button class="btn-reopen" data-act="reopen" data-ts="' + o.ts + '">↩️ Mở lại đơn</button>' +
             '<button class="btn-del-order" data-act="del" data-ts="' + o.ts + '">🗑️ Xóa đơn</button>' +
@@ -2164,7 +2184,13 @@
     document.body.style.overflow = '';
     reloadIfIdle();
   }
-  function timeOf(o) { var t = new Date(o.ts); return two(t.getHours()) + ':' + two(t.getMinutes()); }
+  // Ngày giờ đầy đủ tới từng giây, vd "12:36:05 · Thứ Ba, 06/10/2026"
+  function fullTime(ts) {
+    var t = new Date(ts);
+    return two(t.getHours()) + ':' + two(t.getMinutes()) + ':' + two(t.getSeconds()) + ' · ' +
+      WEEKDAYS[t.getDay()] + ', ' + two(t.getDate()) + '/' + two(t.getMonth() + 1) + '/' + t.getFullYear();
+  }
+  function timeOf(o) { return fullTime(o.ts); }
 
   // Mở lại đơn: đưa các món về giỏ (giá tính theo giá hiện tại), bỏ đơn khỏi lịch sử
   function reopenOrder(o) {
@@ -2405,16 +2431,27 @@
   renderShop();
 
   // ---------- Xóa & tạo đơn mới ----------
+  // Hỏi rõ: bán xong thì qua popup tiền thối để lưu đủ tiền khách đưa/thối lại;
+  // khách không mua thì mới xóa mà không lưu
+  var endModal = $('endModal');
   $('btnNewOrder').addEventListener('click', function () {
     if (!cart.length) { toast('Giỏ hàng đang trống'); return; }
-    askConfirm('🗑️ Xóa đơn này?', 'Tổng đơn hiện tại là ' + $('total').textContent +
-      '. Xóa hết để tính đơn mới?', 'Xóa đơn', function () {
-      cart = [];
-      commitCart();
-      toast('Đã tạo đơn mới');
-      window.scrollTo(0, 0);
-    });
+    $('endMsg').textContent = 'Đơn hiện tại ' + fmt(cartTotal) + ' (' + cart.length + ' loại món).\n' +
+      'Khách đã mua và trả tiền chưa?\n\n• Đã bán: tính tiền thối rồi lưu đơn vào lịch sử.\n• Không mua: xóa đơn, không lưu.';
+    openModal(endModal);
   });
+  $('btnEndPay').addEventListener('click', function () {
+    openPay();               // mở popup tiền thối trước rồi mới đóng, để không bị tải lại giữa chừng
+    closeModal(endModal);
+  });
+  $('btnEndDiscard').addEventListener('click', function () {
+    cart = [];
+    commitCart();
+    closeModal(endModal);
+    window.scrollTo(0, 0);
+    toast('Đã xóa đơn (không lưu vào lịch sử)');
+  });
+  $('btnEndBack').addEventListener('click', function () { closeModal(endModal); });
 
   renderCart();
   // Ảnh đọc từ bộ nhớ hơi chậm hơn, có rồi thì vẽ lại cho hiện ảnh

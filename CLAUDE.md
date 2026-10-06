@@ -47,9 +47,10 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 - **Không bao giờ đưa dữ liệu tiệm, file sao lưu (`taphoa-saoluu-*`, đã có trong `.gitignore`) hay mật khẩu lên repo**, vì repo public.
 - Không thêm lại việc tự nạp món mẫu cho máy mới (máy mới bắt đầu với danh sách trống).
 - Không bỏ các popup hỏi lại trước khi xóa đơn, xóa món, khôi phục, rút ngắn thời gian lưu lịch sử.
+- Đơn lưu vào lịch sử phải đi qua popup tiền thối (có `given`, `change`, `ts` chính xác). Nút "Đơn mới" chỉ
+  cho 2 đường: đã bán → popup tiền thối, hoặc khách không mua → xóa không lưu.
 
 ## Việc đang để dành
 
 - In hóa đơn qua máy in nhiệt AirPrint (Wi-Fi), tạm dừng tới khi chủ tiệm có máy in. Safari iPhone không in Bluetooth được.
-- Nút "Đơn mới" hỏi có lưu đơn vào lịch sử không.
 - Đưa lịch sử đơn vào file sao lưu.
