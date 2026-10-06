@@ -326,10 +326,23 @@
   .order-money .r.total b { font-size: 22px; color: var(--red); }
   .order-money .r.change b { color: var(--green); }
   .order-money .r.none { color: var(--muted); font-size: 16px; }
-  .order-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .order-btns { display: flex; gap: 6px; margin-top: 10px; }
   .order-btns button {
-    flex: 1; min-height: 46px; border-radius: 10px; font-size: 17px; font-weight: 800;
+    flex: 1; min-width: 0; min-height: 46px; padding: 0 4px; border-radius: 10px; font-size: 16px; font-weight: 800; white-space: nowrap;
   }
+  .btn-bill { background: #fff7ed; color: #c2410c; border: 2px solid #fdba74; }
+  /* Thanh "Đã lưu đơn … [🧾 Hóa đơn]" hiện ngay sau khi tính tiền xong */
+  .last-bar {
+    flex-basis: 100%; order: -1; display: flex; align-items: center; gap: 8px;
+    background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 6px 6px 6px 12px;
+    font-size: 16px; font-weight: 700; color: #166534;
+  }
+  .last-bar span { flex: 1; min-width: 0; line-height: 1.3; }
+  .last-bar button {
+    flex-shrink: 0; min-height: 46px; padding: 0 14px; border-radius: 10px;
+    background: #c2410c; color: #fff; font-size: 17px; font-weight: 800;
+  }
+  .bill-img { display: block; width: 100%; border: 2px solid var(--line); border-radius: 10px; margin-bottom: 14px; background: #fff; }
   .btn-reopen { background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd; }
   .btn-del-order { background: #fff; color: var(--red); border: 2px solid #fca5a5; }
   .hist-note { text-align: center; font-size: 16px; color: var(--muted); margin: 14px 0 6px; }
@@ -606,6 +619,7 @@
 <main id="cart"></main>
 
 <footer>
+  <div class="last-bar" id="lastBar" style="display:none"><span id="lastBarText"></span><button id="btnLastBill">🧾 Hóa đơn</button></div>
   <button id="btnNewOrder" aria-label="Xóa và tạo đơn mới"><span class="ico">🗑️</span>Đơn mới</button>
   <div class="total-box">
     <span class="total-label">Tổng cộng</span>
@@ -880,6 +894,19 @@
   </div>
 </div>
 
+<!-- Popup hóa đơn (ảnh để gửi Zalo cho khách) -->
+<div class="overlay" id="billModal">
+  <div class="modal" role="dialog" aria-labelledby="billTitle">
+    <div class="modal-head">
+      <button class="btn-x" id="btnCloseBill" type="button" aria-label="Đóng">✕</button>
+      <h2 id="billTitle">🧾 Hóa đơn</h2>
+    </div>
+    <img id="billImg" class="bill-img" alt="Ảnh hóa đơn">
+    <button class="btn-big save" id="btnShareBill">📤 Gửi hóa đơn (Zalo…)</button>
+    <p class="opt-note">Bấm Gửi rồi chọn Zalo và chọn khách. Hoặc nhấn giữ ảnh để lưu vào máy.</p>
+  </div>
+</div>
+
 <!-- Popup xác nhận -->
 <div class="overlay" id="confirmModal">
   <div class="modal" role="alertdialog">
@@ -898,7 +925,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 33; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 34; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1293,6 +1320,7 @@
   function commitCart() {
     save(KEY_CART, cart);
     renderCart();
+    if (cart.length) hideLastOrder();   // bắt đầu khách mới thì ẩn thanh "vừa lưu đơn"
   }
 
   var cartTotal = 0; // tổng tiền đơn đang tính, dùng cho popup tiền thối
@@ -1833,6 +1861,7 @@
     var cust = cleanName(o.customer);
     if (cust) out.customer = cust;
     if (num(o.debt) > 0) out.debt = o.debt;
+    if (num(o.balanceAfter) && o.balanceAfter !== 0) out.balanceAfter = o.balanceAfter;
     return out;
   }
   function cleanDebt(d) {
@@ -2416,6 +2445,8 @@
     var order = buildOrder(given);
     var cust = payCustShown ? canonicalName($('custIn').value) : '';
     if (cust) order.customer = cust;
+    // Ghi lại số nợ/dư của khách ngay lúc bán để hóa đơn gửi lại sau vẫn đúng
+    if (cust && settings().allowDebt && custBalance(cust)) order.balanceAfter = custBalance(cust);
     saveOrder(order).then(function () {
       if (cust) addRecentCustomer(cust);
       setCurrentCustomer('');
@@ -2423,7 +2454,7 @@
       commitCart();
       closeModal(payModal);
       window.scrollTo(0, 0);
-      toast('✅ Đã lưu đơn ' + fmt(total) + '. Mời khách tiếp theo');
+      showLastOrder(order, '✅ Đã lưu đơn ' + fmt(total) + (order.change ? ' · thối ' + fmt(order.change) : ''));
     }).catch(function () {
       btn.disabled = false;
       toast('⚠️ Không lưu được đơn, thử bấm lại');
@@ -2516,6 +2547,7 @@
         order.change = 0;
         order.customer = name;
         order.debt = owe;
+        order.balanceAfter = after;   // tổng nợ (hoặc dư) của khách sau đơn này
         var entry = { ts: uniqueTs(), customer: name, type: 'no', amount: owe, orderTs: order.ts, total: total, paid: given };
         dbTx(['orders', 'debts'], 'readwrite', function (tx) {
           tx.objectStore('orders').put(order);
@@ -2527,7 +2559,7 @@
           commitCart();
           closeModal(payModal);
           window.scrollTo(0, 0);
-          toast('📒 Đã ghi nợ ' + fmt(owe) + ' cho ' + name + (after > 0 ? '. Tổng nợ: ' + fmt(after) : '. ' + (after < 0 ? 'Còn dư ' + fmt(-after) : 'Hết nợ')));
+          showLastOrder(order, '📒 Ghi nợ ' + fmt(owe) + ' cho ' + name + (after > 0 ? ' · tổng nợ ' + fmt(after) : after < 0 ? ' · còn dư ' + fmt(-after) : ' · hết nợ'));
         }).catch(function () { toast('⚠️ Không ghi được nợ, thử lại'); });
       });
   }
@@ -2773,8 +2805,9 @@
               : '<div class="r none">Không ghi tiền khách đưa</div>') +
           '</div>' +
           '<div class="order-btns">' +
-            '<button class="btn-reopen" data-act="reopen" data-ts="' + o.ts + '">↩️ Mở lại đơn</button>' +
-            '<button class="btn-del-order" data-act="del" data-ts="' + o.ts + '">🗑️ Xóa đơn</button>' +
+            '<button class="btn-bill" data-act="bill" data-ts="' + o.ts + '">🧾 Hóa đơn</button>' +
+            '<button class="btn-reopen" data-act="reopen" data-ts="' + o.ts + '">↩️ Mở lại</button>' +
+            '<button class="btn-del-order" data-act="del" data-ts="' + o.ts + '">🗑️ Xóa</button>' +
           '</div></div>';
       });
       var keep = keepDays();
@@ -2893,6 +2926,7 @@
     if (!o) return;
     if (btn.dataset.act === 'reopen') reopenOrder(o);
     else if (btn.dataset.act === 'del') removeOrder(o);
+    else if (btn.dataset.act === 'bill') openBill(o);
   });
 
   // ---------- Tổng doanh thu theo khoảng ngày tùy chọn ----------
@@ -3152,6 +3186,140 @@
   // Sửa tên ngay trong popup tiền thối thì nút trên màn hình chính cũng đổi theo
   $('custIn').addEventListener('change', function () { setCurrentCustomer(this.value); });
   refreshDebtCache().then(renderCustBar);
+
+  // ---------- Hóa đơn: vẽ thành ảnh để gửi Zalo ----------
+  // Vẽ bằng canvas (không cần thư viện, chạy được khi mất mạng). Số nợ lấy từ balanceAfter đã lưu lúc bán.
+  function billCanvas(o) {
+    var W = 540, S = 2, P = 28, IN = W - P * 2;
+    var FONT = '-apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    var c = document.createElement('canvas'), x = c.getContext('2d'), ops = [], y = P;
+    function font(size, bold) { return (bold ? '700 ' : '400 ') + size + 'px ' + FONT; }
+    function wrap(text, size, bold, maxW) {
+      x.font = font(size, bold);
+      var out = [], cur = '';
+      String(text).split(' ').forEach(function (w) {
+        var t = cur ? cur + ' ' + w : w;
+        if (cur && x.measureText(t).width > maxW) { out.push(cur); cur = w; } else cur = t;
+      });
+      if (cur) out.push(cur);
+      return out;
+    }
+    function text(t, size, opt) {
+      opt = opt || {};
+      wrap(t, size, opt.bold, IN).forEach(function (line) {
+        ops.push({ k: 't', t: line, size: size, bold: opt.bold, align: opt.align || 'left', color: opt.color || '#111', y: y + size });
+        y += Math.round(size * 1.35);
+      });
+    }
+    function row(l, r, size, opt) {
+      opt = opt || {};
+      ops.push({ k: 'r', l: l, r: r, size: size, bold: opt.bold, color: opt.color || '#111', y: y + size });
+      y += Math.round(size * 1.45);
+    }
+    function sep() { y += 8; ops.push({ k: 's', y: y }); y += 14; }
+
+    var shop = getShop().name;
+    text(shop || 'HÓA ĐƠN BÁN HÀNG', 30, { bold: true, align: 'center' });
+    if (shop) text('HÓA ĐƠN BÁN HÀNG', 18, { align: 'center', color: '#555' });
+    text(fullTime(o.ts), 18, { align: 'center', color: '#555' });
+    if (o.customer) text('Khách: ' + o.customer, 20, { align: 'center', bold: true });
+    sep();
+    o.items.forEach(function (it) {
+      text(it.name, 21, { bold: true });
+      row(it.qty + ' ' + it.unitName + ' × ' + fmt(it.price), fmt(it.sub), 20, { color: '#333' });
+      y += 4;
+    });
+    sep();
+    row('TỔNG CỘNG', fmt(o.total), 28, { bold: true, color: '#b91c1c' });
+    if (o.debt > 0) {
+      if (o.given) row('Khách trả trước', fmt(o.given), 21);
+      row('Ghi nợ đơn này', fmt(o.debt), 21, { bold: true, color: '#6b21a8' });
+      if (o.balanceAfter > 0) row('Tổng nợ hiện tại', fmt(o.balanceAfter), 22, { bold: true, color: '#6b21a8' });
+      else if (o.balanceAfter < 0) row('Khách còn dư', fmt(-o.balanceAfter), 21, { bold: true, color: '#15803d' });
+    } else {
+      if (o.given) {
+        row('Khách đưa', fmt(o.given), 21);
+        row('Thối lại', fmt(o.change || 0), 21, { bold: true, color: '#15803d' });
+      }
+      if (o.balanceAfter > 0) row('Nợ cũ còn lại', fmt(o.balanceAfter), 21, { bold: true, color: '#6b21a8' });
+      else if (o.balanceAfter < 0) row('Khách đang dư', fmt(-o.balanceAfter), 21, { bold: true, color: '#15803d' });
+    }
+    sep();
+    text('Cảm ơn quý khách! Hẹn gặp lại.', 20, { align: 'center' });
+    y += P - 8;
+
+    c.width = W * S;
+    c.height = y * S;
+    x.scale(S, S);
+    x.fillStyle = '#fff';
+    x.fillRect(0, 0, W, y);
+    ops.forEach(function (op) {
+      if (op.k === 's') {
+        x.strokeStyle = '#999';
+        x.setLineDash([6, 5]);
+        x.beginPath(); x.moveTo(P, op.y); x.lineTo(W - P, op.y); x.stroke();
+        x.setLineDash([]);
+        return;
+      }
+      x.fillStyle = op.color;
+      x.font = font(op.size, op.bold);
+      if (op.k === 't') {
+        x.textAlign = op.align;
+        x.fillText(op.t, op.align === 'center' ? W / 2 : op.align === 'right' ? W - P : P, op.y);
+      } else {
+        x.textAlign = 'left';
+        x.fillText(op.l, P, op.y);
+        x.textAlign = 'right';
+        x.fillText(op.r, W - P, op.y);
+      }
+    });
+    return c;
+  }
+  function dataUrlToFile(dataUrl, name) {
+    var b = atob(dataUrl.split(',')[1]), arr = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) arr[i] = b.charCodeAt(i);
+    return new File([arr], name, { type: 'image/png' });
+  }
+
+  var billModal = $('billModal'), billFile = null;
+  function openBill(o) {
+    var url = billCanvas(o).toDataURL('image/png');
+    var t = new Date(o.ts);
+    billFile = dataUrlToFile(url, 'hoa-don-' + ymd(t) + '-' + two(t.getHours()) + two(t.getMinutes()) + two(t.getSeconds()) + '.png');
+    $('billImg').src = url;
+    openModal(billModal);
+    billModal.querySelector('.modal').scrollTop = 0;
+  }
+  // Gửi ngay trong lúc bấm (ảnh đã vẽ sẵn) để iPhone cho mở bảng chia sẻ
+  $('btnShareBill').addEventListener('click', function () {
+    if (!billFile) return;
+    if (navigator.canShare && navigator.canShare({ files: [billFile] })) {
+      navigator.share({ files: [billFile], title: 'Hóa đơn' }).catch(function () {});
+      return;
+    }
+    var a = document.createElement('a');
+    a.href = $('billImg').src;
+    a.download = billFile.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('Đã tải ảnh hóa đơn về máy');
+  });
+  $('btnCloseBill').addEventListener('click', function () { closeModal(billModal); });
+
+  // Thanh "vừa lưu đơn" ở dưới cùng: khách cần hóa đơn thì bấm, không cần thì cứ bán tiếp
+  var lastOrder = null;
+  function showLastOrder(order, label) {
+    lastOrder = order;
+    $('lastBarText').textContent = label;
+    $('lastBar').style.display = '';
+  }
+  function hideLastOrder() {
+    if (!lastOrder) return;
+    lastOrder = null;
+    $('lastBar').style.display = 'none';
+  }
+  $('btnLastBill').addEventListener('click', function () { if (lastOrder) openBill(lastOrder); });
 
   // ---------- Xóa & tạo đơn mới ----------
   // Hỏi rõ: bán xong thì qua popup tiền thối để lưu đủ tiền khách đưa/thối lại;

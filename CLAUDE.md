@@ -41,7 +41,8 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
   kho `debts` (keyPath `ts`, sổ nợ `{ ts, customer, type: 'no'|'tra', amount, orderTs?, total?, paid? }`; nợ của khách = tổng `no` − tổng `tra`,
   gộp theo `plain(tên)`). Sổ nợ KHÔNG bị xóa theo thời gian giữ lịch sử. Số dư âm = khách đang dư
   (vd đơn nợ bị xóa sau khi khách đã trả bớt): phải hiện rõ "dư …", không được hiện "đã trả hết".
-- Đơn: `{ ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change, customer?, debt? }`
+- Đơn: `{ ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change, customer?, debt?, balanceAfter? }`
+  (`balanceAfter` = số nợ (+) / dư (−) của khách ngay sau đơn, chụp lúc bán để hóa đơn gửi lại sau vẫn đúng)
   (`debt` = phần ghi nợ; xóa/mở lại đơn có `debt` thì xóa luôn dòng `no` có `orderTs` trùng, trong cùng một giao dịch).
 - Món: `{ id, name, price, unit?, units?: [{ name, price }], bulkMin?, bulkPrice? }`
   (`price`/`unit` = cách bán chính, `units` = cách bán khác như thùng/hộp, `bulk*` = giá sỉ cho cách bán chính).
@@ -69,3 +70,4 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 ## Việc đang để dành
 
 - In hóa đơn qua máy in nhiệt AirPrint (Wi-Fi), tạm dừng tới khi chủ tiệm có máy in. Safari iPhone không in Bluetooth được.
+  Đã có ảnh hóa đơn gửi Zalo (`billCanvas`), máy in có thể dùng lại nội dung đó.
