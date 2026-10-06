@@ -575,6 +575,15 @@
     opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   #toast.show { opacity: 1; }
+  /* Màn hình thấp (iPhone SE…): (đặt cuối để đè các định dạng ở trên) đầu trang cuộn theo giỏ hàng, nút gọn lại để có chỗ xem món */
+  @media (max-height: 700px) {
+    header { position: static; }
+    .btn-head { min-height: 48px; gap: 0; font-size: 15px; }
+    .btn-head .ico { font-size: 15px; }
+    .shop-bar { min-height: 32px; margin-bottom: 4px; font-size: 18px; }
+    .big-search { min-height: 54px; }
+    .cust-bar { min-height: 44px; }
+  }
 </style>
 </head>
 <body>
@@ -889,7 +898,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 32; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 33; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -940,6 +949,7 @@
   // Bản 8 lưu "1 dây = 12 cái"; đổi sang "1 dây = <giá cả dây>" để không mất dữ liệu đã nhập
   var migrated = false;
   products.forEach(function (p) {
+    if (!p || typeof p !== 'object') return;   // dòng hỏng, lọc bỏ ở dưới
     if (!('packName' in p) && !('packSize' in p)) return;
     if (p.packName && p.packSize >= 2) {
       p.units = (p.units || []).concat([{ name: p.packName, price: unitPrice(p, p.packSize) * p.packSize }]);
@@ -949,6 +959,18 @@
     migrated = true;
   });
   if (migrated) save(KEY_PRODUCTS, products);
+  // Bộ nhớ máy có dòng sản phẩm hỏng (thiếu tên/giá, trùng số…) thì bỏ qua dòng đó để app vẫn chạy được
+  var brokenProducts = 0;
+  (function () {
+    var seenIds = {};
+    var good = products.map(function (p) { return cleanProduct(p); }).filter(function (p) {
+      if (!p || seenIds[p.id]) return false;
+      seenIds[p.id] = true;
+      return true;
+    });
+    brokenProducts = products.length - good.length;
+    if (brokenProducts) { products = good; save(KEY_PRODUCTS, products); }
+  })();
 
   // Giỏ hàng: [{ id, qty, unit? }] — unit trống là cách bán chính, có tên là cách bán khác
   var cart = load(KEY_CART, []);
@@ -958,6 +980,7 @@
   // Bỏ các dòng trong giỏ mà món hoặc cách bán đã bị xóa/đổi tên
   function pruneCart() {
     cart = cart.filter(function (c) {
+      if (!c || typeof c !== 'object' || typeof c.qty !== 'number') return false;
       var p = findProduct(c.id);
       return p && c.qty > 0 && (!c.unit || findUnit(p, c.unit));
     });
@@ -978,6 +1001,9 @@
     });
   }
   function digitsOnly(s) { return String(s).replace(/\D/g, ''); }
+  // Giới hạn để lỡ bấm "000" thừa hay gõ nhầm không ra số vô lý (và không vượt mức máy tính chính xác)
+  var MAX_PRICE = 100000000, BIG_PRICE = 10000000, PRICE_DIGITS = 9, CASH_DIGITS = 10, MAX_QTY = 9999;
+  function capDigits(v, max) { return digitsOnly(v).replace(/^0+/, '').slice(0, max); }
   function findProduct(id) {
     for (var i = 0; i < products.length; i++) if (products[i].id === id) return products[i];
     return null;
@@ -1317,6 +1343,8 @@
     $('btnPay').style.display = cart.length ? '' : 'none';
     document.body.classList.toggle('has-pay', cart.length > 0);
     $('total').textContent = fmt(total);
+    var tl = $('total').textContent.length;
+    $('total').style.fontSize = tl > 15 ? '22px' : tl > 13 ? '26px' : tl > 11 ? '32px' : '';
     $('itemCount').textContent = cart.length
       ? cart.length + ' loại món · ' + count + ' sản phẩm'
       : 'Chưa có món nào';
@@ -1336,7 +1364,10 @@
   });
 
   // ---------- Popup chung ----------
-  function openModal(el) { el.classList.add('open'); }
+  function openModal(el) {
+    el.classList.add('open');
+    $('toast').classList.remove('show');   // thông báo cũ không che nút trong popup
+  }
   function closeModal(el) { el.classList.remove('open'); reloadIfIdle(); }
 
   // Có bản mới thì tải lại, nhưng chờ đến khi không còn popup đang nhập dở
@@ -1346,14 +1377,19 @@
     pendingReload = false;
     location.reload();
   }
+  // Chạm vùng tối ngoài popup: chỉ đóng những popup không có ô đang nhập, để khỏi mất phần đang gõ
+  var STICKY_MODALS = ['addModal', 'qtyModal', 'pwModal', 'payModal', 'shopModal', 'debtPayModal', 'custModal'];
   document.querySelectorAll('.overlay').forEach(function (ov) {
-    ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(ov); });
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov && STICKY_MODALS.indexOf(ov.id) < 0) closeModal(ov);
+    });
   });
 
   // ---------- Xác nhận ----------
   var confirmModal = $('confirmModal');
   var onConfirmYes = null;
   function askConfirm(title, msg, yesLabel, onYes) {
+    $('btnConfirmNo').textContent = 'Không';
     $('confirmTitle').textContent = title;
     $('confirmMsg').textContent = msg;
     $('btnConfirmYes').textContent = yesLabel;
@@ -1516,10 +1552,16 @@
     });
   }
   // Sai mật khẩu thì AES-GCM báo lỗi (promise bị từ chối)
+  // File đã khóa có đủ phần và đúng dạng không (không cần mật khẩu)
+  function backupLooksValid(w) {
+    try {
+      return typeof w.iterations === 'number' && w.iterations >= 100000 && w.iterations <= 5000000 &&
+        b64ToBytes(w.salt).length >= 8 && b64ToBytes(w.iv).length === 12 && b64ToBytes(w.data).length > 16;
+    } catch (e) { return false; }
+  }
   function decryptBackup(wrapper, pw) {
-    var it = wrapper.iterations;
-    if (typeof it !== 'number' || it < 100000 || it > 5000000) return Promise.reject(new Error('File lỗi'));
-    return deriveKey(pw, b64ToBytes(wrapper.salt), it).then(function (key) {
+    if (!backupLooksValid(wrapper)) return Promise.reject(new Error('File hỏng'));
+    return deriveKey(pw, b64ToBytes(wrapper.salt), wrapper.iterations).then(function (key) {
       return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(wrapper.iv) }, key, b64ToBytes(wrapper.data));
     }).then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); });
   }
@@ -1601,13 +1643,14 @@
   function prepareBackup() {
     prepared = null;
     var pw = backupPw();
-    if (!pw || !products.length || !window.crypto || !crypto.subtle) { preparingToken = null; updateBackupUI(); return; }
-    var token = {}, orderCount = 0;
+    if (!pw || !window.crypto || !crypto.subtle) { preparingToken = null; updateBackupUI(); return; }
+    var token = {}, orderCount = 0, debtCount = 0;
     preparingToken = token;
     updateBackupUI();
     Promise.all([getAllOrders(), getAllDebts()]).then(function (res) {
       var orders = res[0] || [];
       orderCount = orders.length;
+      debtCount = (res[1] || []).length;
       return encryptBackup(buildBackupJson(orders, res[1] || []), pw);
     }).then(function (json) {
       if (preparingToken !== token) return;
@@ -1615,7 +1658,8 @@
       prepared = {
         file: new File([json], name, { type: 'application/json' }),
         txt: new File([json], name.replace(/\.json$/, '.txt'), { type: 'text/plain' }),
-        orderCount: orderCount
+        orderCount: orderCount,
+        empty: !products.length && !orderCount && !debtCount
       };
       preparingToken = null;
       updateBackupUI();
@@ -1672,10 +1716,10 @@
     markBackedUp();
   }
   function exportBackup() {
-    if (!products.length) { toast('Chưa có món nào để sao lưu'); return; }
     if (!window.crypto || !crypto.subtle) { toast('⚠️ Trình duyệt này không khóa được file'); return; }
     if (!backupPw()) { setPasswordFlow(false); return; }
     if (!prepared) { toast('⏳ Đang khóa file, đợi một chút rồi bấm lại'); return; }
+    if (prepared.empty) { toast('Chưa có dữ liệu nào để sao lưu'); return; }
     var f = prepared.file, t = prepared.txt;
     // Một số trình duyệt chỉ cho chia sẻ file chữ thường: thử thêm bản .txt
     var shareFile = navigator.canShare && (navigator.canShare({ files: [f] }) ? f :
@@ -1810,6 +1854,7 @@
       if (!wrapper || wrapper.app !== 'taphoa') { toast('⚠️ File này không phải file sao lưu của app'); return; }
       if (!wrapper.encrypted) { confirmRestore(wrapper); return; }   // file cũ chưa khóa
       if (!window.crypto || !crypto.subtle) { toast('⚠️ Trình duyệt này không mở được file đã khóa'); return; }
+      if (!backupLooksValid(wrapper)) { toast('⚠️ File sao lưu bị hỏng (có thể tải về chưa trọn), không mở được'); return; }
       function askPw() {
         askPassword({
           title: '🔒 Nhập mật khẩu',
@@ -1822,7 +1867,7 @@
             if (!backupPw()) setBackupPw(pw);
             confirmRestore(data);
             return '';
-          }, function () { return 'Sai mật khẩu, thử lại.'; });
+          }, function () { return 'Sai mật khẩu (hoặc file bị hỏng), thử lại.'; });
         });
       }
       // Thử mật khẩu đang nhớ trên máy trước; đúng thì khỏi phải gõ
@@ -1893,7 +1938,7 @@
   $('btnPhotoDel').addEventListener('click', function () { pendingPhoto = null; showPhotoPreview(); });
 
   function updatePriceHint() {
-    var d = digitsOnly(priceIn.value).replace(/^0+/, '');
+    var d = capDigits(priceIn.value, PRICE_DIGITS);
     priceIn.value = d ? money.format(Number(d)) : '';
     var old = editingId !== null && findProduct(editingId);
     // Chỉ nhắc giá cũ khi đã gõ giá khác, cho gọn
@@ -1904,7 +1949,7 @@
   // Ví dụ cụ thể để chủ tiệm thấy ngay khách sẽ trả bao nhiêu
   function updateBulkHint() {
     var bm = Number(digitsOnly(bulkMinIn.value)) || 0;
-    var bd = digitsOnly(bulkPriceIn.value).replace(/^0+/, '');
+    var bd = capDigits(bulkPriceIn.value, PRICE_DIGITS);
     bulkMinIn.value = bm ? String(bm) : '';
     bulkPriceIn.value = bd ? money.format(Number(bd)) : '';
     var price = Number(digitsOnly(priceIn.value));
@@ -1955,7 +2000,7 @@
   });
   unitRowsEl.addEventListener('input', function (e) {
     if (!e.target.classList.contains('unit-price')) return;
-    var d = digitsOnly(e.target.value).replace(/^0+/, '');
+    var d = capDigits(e.target.value, PRICE_DIGITS);
     e.target.value = d ? money.format(Number(d)) : '';
   });
   // Nút 000 cạnh mỗi ô giá: gõ 15 rồi bấm 000 thành 15.000
@@ -2003,7 +2048,7 @@
 
   priceIn.addEventListener('input', updatePriceHint);
 
-  function saveProduct() {
+  function saveProduct(bigPriceOk) {
     var name = nameIn.value.trim().replace(/\s+/g, ' ');
     var price = Number(digitsOnly(priceIn.value));
     var bulkMin = Number(digitsOnly(bulkMinIn.value)) || 0;
@@ -2057,8 +2102,24 @@
     if (!price || price <= 0) {
       $('priceError').textContent = 'Vui lòng nhập giá cho 1 ' + unitLabel + '.';
       priceIn.classList.add('invalid'); ok = false;
+    } else if (price > MAX_PRICE) {
+      $('priceError').textContent = 'Giá quá lớn (tối đa ' + fmt(MAX_PRICE) + ').';
+      priceIn.classList.add('invalid'); ok = false;
+    }
+    if (units.some(function (u) { return u.price > MAX_PRICE; })) {
+      $('unitError').textContent = 'Giá quá lớn (tối đa ' + fmt(MAX_PRICE) + ').';
+      ok = false;
     }
     if (!ok) return;
+    // Giá rất cao thì hỏi lại, phòng lỡ bấm "000" thừa
+    var highest = Math.max.apply(null, [price].concat(units.map(function (u) { return u.price; })));
+    if (!bigPriceOk && highest > BIG_PRICE) {
+      askConfirm('Giá rất cao, đúng không?', 'Giá ' + fmt(highest) + ' cho một ' + (highest === price ? unitLabel :
+        units.find(function (u) { return u.price === highest; }).name) + '.\nNếu lỡ bấm thừa "000" thì bấm "Sửa lại".',
+        'Đúng, lưu', function () { saveProduct(true); });
+      $('btnConfirmNo').textContent = 'Sửa lại';
+      return;
+    }
 
     function applyBulk(p) {
       if (bulkPrice) { p.bulkMin = bulkMin; p.bulkPrice = bulkPrice; }
@@ -2115,10 +2176,10 @@
   $('btnOpenAdd').addEventListener('click', function () { openAddModal('', false); });
   $('btnCancelAdd').addEventListener('click', function () { closeModal(addModal); });
   $('btnCloseAdd').addEventListener('click', function () { closeModal(addModal); });
-  $('btnSaveAdd').addEventListener('click', saveProduct);
+  $('btnSaveAdd').addEventListener('click', function () { saveProduct(false); });
   $('btnDeleteProduct').addEventListener('click', deleteProduct);
   nameIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') priceIn.focus(); });
-  priceIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveProduct(); });
+  priceIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveProduct(false); });
 
   // ---------- Nhập số lượng ----------
   var qtyModal = $('qtyModal'), qtyIn = $('qtyInput');
@@ -2126,11 +2187,15 @@
 
   function updateQtyHint() {
     var p = findProduct(qtyEditingId);
-    var q = Number(digitsOnly(qtyIn.value)) || 0;
-    qtyIn.value = q ? String(q) : '';
+    var raw = digitsOnly(qtyIn.value);
+    var q = Number(raw) || 0, capped = q > MAX_QTY;
+    if (capped) q = MAX_QTY;
+    qtyIn.value = raw === '' ? '' : String(q);
+    if (raw !== '' && !q) { $('qtyHint').innerHTML = '⚠️ Số lượng 0 = bỏ món này khỏi giỏ'; return; }
     if (!p || !q) { $('qtyHint').innerHTML = ''; return; }
     var price = linePrice(p, qtyEditingUnit, q);
-    $('qtyHint').innerHTML = 'Thành tiền: <b>' + fmt(price * q) + '</b>' +
+    $('qtyHint').innerHTML = (capped ? '⚠️ Tối đa ' + money.format(MAX_QTY) + '.<br>' : '') +
+      'Thành tiền: <b>' + fmt(price * q) + '</b>' +
       (!qtyEditingUnit && price < p.price ? ' (giá sỉ ' + fmt(price) + ' / ' + escapeHtml(mainUnitName(p)) + ')' : '');
   }
   function openQtyModal(id, unit) {
@@ -2147,10 +2212,14 @@
     setTimeout(function () { qtyIn.focus(); qtyIn.select(); }, 50);
   }
   function saveQty() {
-    var q = Number(digitsOnly(qtyIn.value)) || 0;
-    if (q > 9999) q = 9999;
-    setQty(qtyEditingId, qtyEditingUnit, q);
-    closeModal(qtyModal);
+    var q = Math.min(Number(digitsOnly(qtyIn.value)) || 0, MAX_QTY);
+    var id = qtyEditingId, unit = qtyEditingUnit, p = findProduct(id);
+    if (q > 0) { setQty(id, unit, q); closeModal(qtyModal); return; }
+    // Số lượng 0: hỏi lại trước khi bỏ món khỏi giỏ
+    askConfirm('Bỏ món này khỏi giỏ?', (p ? p.name : 'Món này') + ' sẽ bị bỏ khỏi giỏ hàng.', 'Bỏ món', function () {
+      setQty(id, unit, 0);
+      closeModal(qtyModal);
+    });
   }
   qtyIn.addEventListener('input', updateQtyHint);
   qtyIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveQty(); });
@@ -2201,9 +2270,10 @@
   function customerChipsHtml(q, limit) {
     var key = plain(q || '').trim();
     return matchCustomers(q || '', limit).map(function (n) {
-      var owe = settings().allowDebt && typeof custOwes === 'function' ? custOwes(n) : 0;
+      var bal = settings().allowDebt && typeof custBalance === 'function' ? custBalance(n) : 0;
       return '<button class="chip" type="button" data-cust="' + escapeHtml(n) + '">' +
-        (key ? highlight(n, key) : escapeHtml(n)) + (owe ? ' · nợ ' + money.format(owe) : '') + '</button>';
+        (key ? highlight(n, key) : escapeHtml(n)) +
+        (bal > 0 ? ' · nợ ' + money.format(bal) : bal < 0 ? ' · dư ' + money.format(-bal) : '') + '</button>';
     }).join('');
   }
   // Gõ "chị lan" mà đã có khách "Chị Lan" thì dùng lại đúng tên cũ cho đồng nhất
@@ -2238,9 +2308,9 @@
     var bar = $('btnCust'), on = !!settings().askCustomer;
     bar.style.display = on ? '' : 'none';
     if (!on) return;
-    var owe = currentCustomer && settings().allowDebt ? custOwes(currentCustomer) : 0;
+    var bal = currentCustomer && settings().allowDebt ? custBalance(currentCustomer) : 0;
     $('custBarText').textContent = !currentCustomer ? '👤 Chạm để ghi tên khách'
-      : owe ? '👤 ' + currentCustomer + ' · nợ ' + fmt(owe) + ' ✏️'
+      : bal ? '👤 ' + currentCustomer + ' · ' + balanceText(bal) + ' ✏️'
       : '👤 Khách: ' + currentCustomer + ' ✏️';
     bar.classList.toggle('set', !!currentCustomer);
   }
@@ -2270,7 +2340,7 @@
   }
 
   function updatePay() {
-    var d = digitsOnly(cashIn.value).replace(/^0+/, '');
+    var d = capDigits(cashIn.value, CASH_DIGITS);
     cashIn.value = d ? money.format(Number(d)) : '';
     var given = Number(d) || 0, total = cartTotal;
     var row = $('payResultRow');
@@ -2306,7 +2376,8 @@
     }).join('');
     cashIn.value = '';
     // Tên khách: chỉ hiện khi máy này bật "Ghi tên khách khi bán"
-    var askCust = settings().askCustomer;
+    // Hiện ô tên khách khi máy bật "ghi tên từ đầu", hoặc khi đơn đang tính đã có tên (vd mở lại đơn ghi nợ)
+    var askCust = settings().askCustomer || !!currentCustomer;
     payCustShown = !!askCust;
     $('custBox').style.display = askCust ? '' : 'none';
     $('custIn').value = askCust ? currentCustomer : '';
@@ -2402,6 +2473,9 @@
   // ---- Trong popup tiền thối: nút Ghi nợ + nhắc khách đang nợ bao nhiêu ----
   var debtCache = {};   // nạp khi mở popup tiền thối
   function custOwes(name) { var g = debtCache[plain(name)]; return g ? Math.max(0, g.balance) : 0; }
+  // Số dư thật: dương = khách nợ, âm = khách đang dư (đã trả nhiều hơn số nợ còn lại)
+  function custBalance(name) { var g = debtCache[plain(name)]; return g ? g.balance : 0; }
+  function balanceText(b) { return b > 0 ? 'nợ ' + fmt(b) : b < 0 ? 'dư ' + fmt(-b) : ''; }
   function refreshDebtCache() {
     if (!settings().allowDebt) { debtCache = {}; return Promise.resolve(); }
     return getAllDebts().then(function (all) { debtCache = debtGroups(all); }).catch(function () {});
@@ -2418,8 +2492,8 @@
       btn.textContent = owe <= 0 ? '📒 Khách mua nợ (khách đã trả đủ)' : '📒 Khách mua nợ — ghi tên';
       return;
     }
-    var name = canonicalName($('custIn').value), old = name ? custOwes(name) : 0;
-    info.textContent = name && old ? '📒 ' + name + ' đang nợ ' + fmt(old) : '';
+    var name = canonicalName($('custIn').value), old = name ? custBalance(name) : 0;
+    info.textContent = name && old ? '📒 ' + name + ' đang ' + balanceText(old) : '';
     if (!name) { btn.disabled = true; btn.textContent = '📒 Ghi nợ (nhập tên khách trước)'; }
     else if (owe <= 0) { btn.disabled = true; btn.textContent = '📒 Ghi nợ (khách đã trả đủ)'; }
     else {
@@ -2431,10 +2505,13 @@
     var name = canonicalName($('custIn').value);
     var given = Number(digitsOnly(cashIn.value)) || 0, total = cartTotal, owe = total - given;
     if (!name || owe <= 0) return;
-    var old = custOwes(name);
+    var old = custBalance(name), after = old + owe;
     askConfirm('📒 Ghi nợ?',
       name + ' mua ' + fmt(total) + (given ? ', trả trước ' + fmt(given) : '') + '.\n' +
-      'Ghi nợ thêm: ' + fmt(owe) + '\nTổng nợ sau khi ghi: ' + fmt(old + owe), 'Ghi nợ', function () {
+      'Ghi nợ thêm: ' + fmt(owe) +
+      (old < 0 ? '\nKhách đang dư ' + fmt(-old) + ', được trừ vào.' : '') +
+      '\n' + (after > 0 ? 'Tổng nợ sau khi ghi: ' + fmt(after) : after < 0 ? 'Khách vẫn còn dư: ' + fmt(-after) : 'Khách không còn nợ.'),
+      'Ghi nợ', function () {
         var order = buildOrder(given);
         order.change = 0;
         order.customer = name;
@@ -2450,7 +2527,7 @@
           commitCart();
           closeModal(payModal);
           window.scrollTo(0, 0);
-          toast('📒 Đã ghi nợ ' + fmt(owe) + ' cho ' + name + '. Tổng nợ: ' + fmt(old + owe));
+          toast('📒 Đã ghi nợ ' + fmt(owe) + ' cho ' + name + (after > 0 ? '. Tổng nợ: ' + fmt(after) : '. ' + (after < 0 ? 'Còn dư ' + fmt(-after) : 'Hết nợ')));
         }).catch(function () { toast('⚠️ Không ghi được nợ, thử lại'); });
       });
   }
@@ -2479,11 +2556,17 @@
       debtGroupsShown = debtGroups(all);
       var groups = Object.keys(debtGroupsShown).map(function (k) { return debtGroupsShown[k]; });
       var owing = groups.filter(function (g) { return g.balance > 0; }).sort(function (a, b) { return b.balance - a.balance; });
-      var paid = groups.filter(function (g) { return g.balance <= 0; }).sort(function (a, b) { return a.name.localeCompare(b.name, 'vi'); });
+      var credit = groups.filter(function (g) { return g.balance < 0; }).sort(function (a, b) { return a.balance - b.balance; });
+      var paid = groups.filter(function (g) { return g.balance === 0; }).sort(function (a, b) { return a.name.localeCompare(b.name, 'vi'); });
       var sum = owing.reduce(function (s, g) { return s + g.balance; }, 0);
       var html = '<div class="debt-sum">📒 Khách đang nợ<b>' + fmt(sum) + '</b>' + owing.length + ' khách</div>';
       if (!owing.length) html += '<div class="empty">Không có ai đang nợ. 🎉</div>';
       owing.forEach(function (g) { html += debtCard(g); });
+      // Khách đang dư (trả nhiều hơn nợ, hoặc đơn nợ đã bị xóa sau khi khách trả): phải hiện rõ, không được giấu
+      if (credit.length) {
+        html += '<div class="rev-days-title" style="margin-top:12px">💚 Khách đang dư tiền (sẽ trừ vào lần nợ sau):</div>';
+        credit.forEach(function (g) { html += debtCard(g); });
+      }
       if (paid.length) {
         html += '<button class="btn-show-paid" type="button" data-showpaid="1">' +
           (debtShowPaid ? '▲ Ẩn' : '▼ Xem') + ' khách đã trả hết (' + paid.length + ')</button>';
@@ -2498,7 +2581,7 @@
     var open = debtOpenKey === g.key;
     var html = '<div class="debt-card">' +
       '<div class="debt-top"><span>👤 ' + escapeHtml(g.name) + '</span>' +
-      '<b class="' + (g.balance > 0 ? '' : 'zero') + '">' + (g.balance > 0 ? 'nợ ' + fmt(g.balance) : 'đã trả hết') + '</b></div>' +
+      '<b class="' + (g.balance > 0 ? '' : 'zero') + '">' + (g.balance === 0 ? 'đã trả hết' : balanceText(g.balance)) + '</b></div>' +
       '<div class="debt-btns">' +
         (g.balance > 0 ? '<button class="btn-debt-pay" type="button" data-dpay="' + escapeHtml(g.key) + '">💵 Trả nợ</button>' : '') +
         '<button class="btn-debt-detail" type="button" data-ddetail="' + escapeHtml(g.key) + '">' + (open ? '▲ Ẩn chi tiết' : '📜 Chi tiết') + '</button>' +
@@ -2550,7 +2633,7 @@
     openModal(debtPayModal);
   }
   function updateDebtPay() {
-    var d = digitsOnly(dpIn.value).replace(/^0+/, '');
+    var d = capDigits(dpIn.value, CASH_DIGITS);
     dpIn.value = d ? money.format(Number(d)) : '';
     var given = Number(d) || 0, owe = dpGroup ? dpGroup.balance : 0, row = $('dpResultRow');
     $('dpGiven').textContent = given ? fmt(given) : '—';
@@ -2728,10 +2811,22 @@
   function timeOf(o) { return fullTime(o.ts); }
 
   // Mở lại đơn: đưa các món về giỏ (giá tính theo giá hiện tại), bỏ đơn khỏi lịch sử
+  // Đơn có ghi nợ mà khách đã trả bớt: báo rõ khách sẽ thành "đang dư" bao nhiêu nếu bỏ khoản nợ này
+  function debtRemovalNote(o) {
+    if (!(o.debt > 0) || !o.customer) return Promise.resolve('');
+    return getAllDebts().then(function (all) {
+      var g = debtGroups(all)[plain(o.customer)], bal = g ? g.balance : 0, after = bal - o.debt;
+      return '\n📒 Khoản ghi nợ ' + fmt(o.debt) + ' của đơn này cũng được bỏ khỏi sổ nợ.' +
+        (after < 0 ? '\n⚠️ ' + o.customer + ' đã trả bớt tiền nợ, nên sau khi bỏ sẽ thành ĐANG DƯ ' + fmt(-after) +
+          ' (Sổ nợ ghi rõ, tự trừ vào lần nợ sau).' : '');
+    }).catch(function () { return '\n📒 Khoản ghi nợ ' + fmt(o.debt) + ' của đơn này cũng được bỏ khỏi sổ nợ.'; });
+  }
   function reopenOrder(o) {
+    debtRemovalNote(o).then(function (note) { reopenOrderConfirm(o, note); });
+  }
+  function reopenOrderConfirm(o, note) {
     var msg = 'Đưa đơn ' + fmt(o.total) + ' lúc ' + timeOf(o) + ' trở lại giỏ để sửa hoặc tính lại?\n' +
-      'Đơn này sẽ được bỏ khỏi lịch sử; bấm Xong lần nữa sẽ lưu lại.' +
-      (o.debt > 0 ? '\n📒 Khoản ghi nợ ' + fmt(o.debt) + ' của đơn này cũng được bỏ khỏi sổ nợ.' : '') +
+      'Đơn này sẽ được bỏ khỏi lịch sử; bấm Xong lần nữa sẽ lưu lại.' + note +
       (cart.length ? '\n\n⚠️ Giỏ đang có ' + cart.length + ' món sẽ bị thay bằng đơn này.' : '');
     askConfirm('↩️ Mở lại đơn?', msg, 'Mở lại', function () {
       var missing = 0;
@@ -2753,10 +2848,11 @@
     });
   }
   function removeOrder(o) {
+    debtRemovalNote(o).then(function (note) {
     askConfirm('🗑️ Xóa đơn này?', 'Xóa đơn ' + fmt(o.total) + ' lúc ' + timeOf(o) +
-      ' khỏi lịch sử? Doanh thu trong ngày sẽ trừ đi số này.' +
-      (o.debt > 0 ? '\n📒 Khoản ghi nợ ' + fmt(o.debt) + ' của đơn này cũng bị bỏ khỏi sổ nợ.' : ''), 'Xóa đơn', function () {
+      ' khỏi lịch sử? Doanh thu trong ngày sẽ trừ đi số này.' + note, 'Xóa đơn', function () {
       deleteOrderWithDebt(o.ts).then(renderHistory, function () { toast('⚠️ Không xóa được đơn'); });
+    });
     });
   }
 
@@ -3015,8 +3111,8 @@
   // ---------- Chọn khách mua trước khi chọn hàng ----------
   var custModal = $('custModal'), custPickIn = $('custPickIn');
   function updateCustPickDebt() {
-    var name = canonicalName(custPickIn.value), owe = name && settings().allowDebt ? custOwes(name) : 0;
-    $('custPickDebt').textContent = owe ? '📒 ' + name + ' đang nợ ' + fmt(owe) : '';
+    var name = canonicalName(custPickIn.value), bal = name && settings().allowDebt ? custBalance(name) : 0;
+    $('custPickDebt').textContent = bal ? '📒 ' + name + ' đang ' + balanceText(bal) : '';
   }
   function openCustPicker() {
     custPickIn.value = '';
@@ -3082,6 +3178,7 @@
   $('btnEndBack').addEventListener('click', function () { closeModal(endModal); });
 
   renderCart();
+  if (brokenProducts) setTimeout(function () { toast('⚠️ Đã bỏ qua ' + brokenProducts + ' sản phẩm bị lỗi trong bộ nhớ máy'); }, 600);
   // Ảnh đọc từ bộ nhớ hơi chậm hơn, có rồi thì vẽ lại cho hiện ảnh
   purgeOldOrders().catch(function () {});
   loadAllPhotos().then(function () {

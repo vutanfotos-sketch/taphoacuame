@@ -22,6 +22,9 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 - Dành cho người lớn tuổi: nút bấm tối thiểu 44px, chữ tối thiểu 16px, màu tương phản cao.
   Mọi thao tác xóa/thay dữ liệu phải có popup hỏi lại (`askConfirm`).
 - Tiền: số nguyên đồng, hiển thị bằng `fmt()` (Intl `vi-VN` + "đ"). Tìm kiếm không dấu bằng `plain()`.
+- Giới hạn chống gõ nhầm (đừng nới mà không hỏi): giá ≤ `MAX_PRICE` 100 triệu, trên `BIG_PRICE` 10 triệu thì hỏi lại;
+  tiền khách đưa ≤ 10 chữ số; số lượng ≤ `MAX_QTY` 9.999 (số 0 thì hỏi bỏ món). Giữ mọi phép tính dưới 2^53.
+- Khi mở app, dữ liệu hỏng trong bộ nhớ phải được lọc (`cleanProduct`, `pruneCart`) chứ không được làm app ngừng chạy.
 - Thử trên khung điện thoại 375×812. Thử xong phải xóa sạch localStorage và IndexedDB `taphoa`.
   Khi thử sao lưu, giả lập `navigator.share` / chặn `a.click()` để không tải file thật.
 
@@ -36,7 +39,8 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 - IndexedDB `taphoa` phiên bản 3: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
   kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm),
   kho `debts` (keyPath `ts`, sổ nợ `{ ts, customer, type: 'no'|'tra', amount, orderTs?, total?, paid? }`; nợ của khách = tổng `no` − tổng `tra`,
-  gộp theo `plain(tên)`). Sổ nợ KHÔNG bị xóa theo thời gian giữ lịch sử.
+  gộp theo `plain(tên)`). Sổ nợ KHÔNG bị xóa theo thời gian giữ lịch sử. Số dư âm = khách đang dư
+  (vd đơn nợ bị xóa sau khi khách đã trả bớt): phải hiện rõ "dư …", không được hiện "đã trả hết".
 - Đơn: `{ ts, items: [{ id, name, unit, unitName, qty, price, sub }], total, given, change, customer?, debt? }`
   (`debt` = phần ghi nợ; xóa/mở lại đơn có `debt` thì xóa luôn dòng `no` có `orderTs` trùng, trong cùng một giao dịch).
 - Món: `{ id, name, price, unit?, units?: [{ name, price }], bulkMin?, bulkPrice? }`
