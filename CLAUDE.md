@@ -27,7 +27,8 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 
 ## Dữ liệu (chỉ nằm trên từng điện thoại)
 
-- localStorage: `taphoa_products`, `taphoa_cart`, `taphoa_last_backup`, `taphoa_backup_pw`, `taphoa_order_keep_days`.
+- localStorage: `taphoa_products`, `taphoa_cart`, `taphoa_last_backup`, `taphoa_backup_pw`, `taphoa_order_keep_days`,
+  `taphoa_shop` (`{ name }`: chỉ tên tiệm; chủ tiệm không muốn có địa chỉ và số điện thoại).
 - IndexedDB `taphoa` phiên bản 2: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
   kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm).
 - Món: `{ id, name, price, unit?, units?: [{ name, price }], bulkMin?, bulkPrice? }`
@@ -38,7 +39,8 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 ## Tuyệt đối không tự ý sửa (hỏi chủ tiệm trước)
 
 - **Định dạng file sao lưu**: bản 2 mã hóa AES-GCM 256, khóa sinh bằng PBKDF2-SHA256 600.000 vòng,
-  các trường `app, version, encrypted, cipher, kdf, iterations, salt, iv, data`. Phải luôn khôi phục được
+  các trường `app, version, encrypted, cipher, kdf, iterations, salt, iv, data`; bên trong là
+  `{ app, version: 1, createdAt, products, photos, shop? }`. Phải luôn khôi phục được
   cả file bản 2 lẫn file cũ bản 1 (chưa mã hóa). Đổi định dạng là các file sao lưu đã có sẽ không mở được.
 - **Tên khóa localStorage, tên/phiên bản/kho IndexedDB và cấu trúc dữ liệu ở trên**: đổi mà không có đoạn chuyển đổi là mất dữ liệu trên điện thoại.
   Giữ nguyên đoạn chuyển đổi `packName/packSize` (bản 8) sang `units`.
@@ -49,6 +51,5 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 ## Việc đang để dành
 
 - In hóa đơn qua máy in nhiệt AirPrint (Wi-Fi), tạm dừng tới khi chủ tiệm có máy in. Safari iPhone không in Bluetooth được.
-- Mục "Tên tiệm" (kèm địa chỉ, số điện thoại) để mỗi máy tự điền, dùng khi in hóa đơn hoặc chia sẻ app cho người khác. Chủ tiệm nói hiện chưa cần.
 - Nút "Đơn mới" hỏi có lưu đơn vào lịch sử không.
 - Đưa lịch sử đơn vào file sao lưu.

@@ -44,6 +44,15 @@
     box-shadow: 0 2px 6px rgba(0,0,0,.25);
   }
   .head-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  /* Dòng tên tiệm trên đầu app, chạm để sửa */
+  .shop-bar {
+    width: 100%; min-height: 40px; margin-bottom: 8px; padding: 0 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: transparent; color: #fff; font-size: 21px; font-weight: 900;
+  }
+  .shop-bar #shopTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .shop-bar.empty { font-size: 18px; font-weight: 700; opacity: .9; text-decoration: underline; }
+  .shop-bar .shop-edit { font-size: 16px; opacity: .85; flex-shrink: 0; }
   .btn-head {
     flex: 1; min-width: 0; background: #fff; color: var(--red); font-weight: 800; font-size: 16px;
     min-height: 58px; padding: 4px 2px; border-radius: 12px; white-space: nowrap; line-height: 1.15;
@@ -452,6 +461,7 @@
 <body>
 
 <header>
+  <button class="shop-bar empty" id="btnShop"><span id="shopTitle">🏪 Bấm để đặt tên tiệm</span><span class="shop-edit">✏️</span></button>
   <div class="head-row">
     <button class="btn-head" id="btnOpenList"><span class="ico">✏️</span>Sửa giá</button>
     <button class="btn-head" id="btnOpenAdd"><span class="ico">➕</span>Thêm món</button>
@@ -647,6 +657,23 @@
   </div>
 </div>
 
+<!-- Popup thông tin tiệm -->
+<div class="overlay" id="shopModal">
+  <div class="modal" role="dialog" aria-labelledby="shopModalTitle">
+    <h2 id="shopModalTitle">🏪 Tên tiệm</h2>
+    <p class="backup-note">Chỉ lưu trên điện thoại này, mỗi máy tự điền riêng. Tên tiệm hiện trên đầu app và sau này in lên hóa đơn.</p>
+    <div class="field">
+      <label for="shopNameIn">Tên tiệm</label>
+      <input id="shopNameIn" type="text" autocomplete="off" maxlength="40" placeholder="Ví dụ: Tạp Hóa Cô Ba">
+      <div class="error" id="shopError"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnShopCancel">Hủy</button>
+      <button class="btn-ok" id="btnShopSave">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
 <!-- Popup xác nhận -->
 <div class="overlay" id="confirmModal">
   <div class="modal" role="alertdialog">
@@ -665,7 +692,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 18; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 19; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1361,6 +1388,7 @@
   }
   function buildBackupJson() {
     var data = { app: 'taphoa', version: 1, createdAt: new Date().toISOString(), products: products, photos: {} };
+    if (getShop().name) data.shop = getShop();   // trường thêm sau, file cũ không có thì bỏ qua
     products.forEach(function (p) { if (photos[p.id]) data.photos[p.id] = photos[p.id]; });
     return JSON.stringify(data);
   }
@@ -1489,10 +1517,13 @@
       if (seen[id] && typeof v === 'string' && v.indexOf('data:image/') === 0) newPhotos[id] = v;
     });
     var when = data.createdAt && !isNaN(new Date(data.createdAt)) ? fmtDateTime(new Date(data.createdAt)) : 'không rõ';
+    var fileShop = cleanShop(data.shop);
     askConfirm('📥 Khôi phục dữ liệu?',
-      'File sao lưu ngày ' + when + ':\n• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n\n' +
+      'File sao lưu ngày ' + when + ':\n' + (fileShop.name ? '• Tiệm: ' + fileShop.name + '\n' : '') +
+      '• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n\n' +
       'Danh sách hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.',
       'Khôi phục', function () {
+        if (fileShop.name) setShop(fileShop);
         products = list;
         save(KEY_PRODUCTS, products);
         pruneCart();
@@ -2132,6 +2163,52 @@
     if (btn.dataset.act === 'reopen') reopenOrder(o);
     else if (btn.dataset.act === 'del') removeOrder(o);
   });
+
+  // ---------- Tên tiệm (mỗi máy tự điền, chỉ có tên) ----------
+  var KEY_SHOP = 'taphoa_shop';
+  var shopModal = $('shopModal');
+  function cleanShop(x) {
+    var name = x && typeof x.name === 'string' ? x.name.trim().replace(/\s+/g, ' ').slice(0, 40) : '';
+    return { name: name };
+  }
+  function getShop() {
+    try { return cleanShop(JSON.parse(localStorage.getItem(KEY_SHOP) || '{}')); } catch (e) { return cleanShop({}); }
+  }
+  function setShop(shop) {
+    shop = cleanShop(shop);
+    try {
+      if (shop.name) localStorage.setItem(KEY_SHOP, JSON.stringify(shop));
+      else localStorage.removeItem(KEY_SHOP);
+    } catch (e) {}
+    renderShop();
+  }
+  function renderShop() {
+    var shop = getShop(), bar = $('btnShop');
+    $('shopTitle').textContent = shop.name ? '🏪 ' + shop.name : '🏪 Bấm để đặt tên tiệm';
+    bar.classList.toggle('empty', !shop.name);
+    document.title = shop.name ? shop.name + ' – Tính tiền' : 'Máy Tính Tiền';
+    // Khi "Thêm vào MH chính", iPhone lấy tên này làm tên biểu tượng
+    var meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (meta) meta.setAttribute('content', shop.name || 'Tạp Hóa');
+  }
+  function openShop() {
+    var shop = getShop();
+    $('shopNameIn').value = shop.name;
+    $('shopError').textContent = '';
+    openModal(shopModal);
+    setTimeout(function () { $('shopNameIn').focus(); }, 50);
+  }
+  function saveShop() {
+    var shop = cleanShop({ name: $('shopNameIn').value });
+    setShop(shop);
+    closeModal(shopModal);
+    toast(shop.name ? '🏪 Đã lưu tên tiệm: ' + shop.name : 'Đã bỏ tên tiệm');
+  }
+  $('btnShop').addEventListener('click', openShop);
+  $('btnShopCancel').addEventListener('click', function () { closeModal(shopModal); });
+  $('btnShopSave').addEventListener('click', saveShop);
+  $('shopNameIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') saveShop(); });
+  renderShop();
 
   // ---------- Xóa & tạo đơn mới ----------
   $('btnNewOrder').addEventListener('click', function () {
