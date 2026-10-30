@@ -612,6 +612,21 @@
   .bmoney .r b { white-space: nowrap; }
   .bdone { color: var(--green); font-weight: 800; font-size: 18px; margin-top: 2px; }
   .blast { font-size: 16px; color: var(--muted); margin-top: 4px; }
+  .bphotos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .bphoto { position: relative; width: 76px; height: 76px; padding: 0; border: 2px solid var(--line);
+    border-radius: 10px; overflow: hidden; background: #f3f4f6; }
+  .bphoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bphoto .x { position: absolute; top: 2px; right: 2px; width: 30px; height: 30px; min-height: 0; padding: 0;
+    border: 0; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; font-size: 16px; font-weight: 800; }
+  #bPhotoView { align-items: stretch; background: #000; z-index: 60; }
+  .pv-wrap { position: relative; flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding-bottom: 96px; }
+  .pv-wrap img { display: block; width: 100%; height: auto; }
+  .pv-wrap.zoom img { width: 250%; max-width: none; }
+  .pv-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(0,0,0,.75); }
+  .pv-bar button { flex: 1; min-height: 54px; font-size: 19px; font-weight: 800; border-radius: 12px; border: 0; }
+  .pv-bar .pv-zoom { background: #fff; color: #111; }
+  .pv-bar .pv-close { background: #9a3412; color: #fff; }
   .bbtns { display: flex; gap: 6px; margin-top: 10px; }
   .bbtns button { flex: 1; min-width: 0; min-height: 46px; padding: 0 4px; border-radius: 10px; font-size: 16px; font-weight: 800; white-space: nowrap; }
   .bb-pay { background: var(--green); color: #fff; }
@@ -1013,6 +1028,12 @@
       <div class="hint" id="bItemsHint"></div>
       <button class="chip" type="button" id="btnUseItemsTotal" style="display:none;margin-top:6px">Dùng cộng chi tiết làm tổng phải trả</button>
     </div>
+    <div class="field">
+      <label>📷 Ảnh hóa đơn <span class="opt">(không bắt buộc, tối đa 6 ảnh)</span></label>
+      <div class="bphotos" id="bPhotos"></div>
+      <button class="btn-show-paid" type="button" id="btnAddBPhoto">📷 Chụp / chọn ảnh hóa đơn</button>
+      <input class="file-hidden" id="bPhotoIn" type="file" accept="image/*" multiple tabindex="-1">
+    </div>
     <div class="field"><label for="bNote">Ghi chú <span class="opt">(không bắt buộc)</span></label><textarea id="bNote" class="b-input" maxlength="300"></textarea></div>
     <div class="error" id="bError"></div>
     <div class="modal-actions">
@@ -1048,6 +1069,15 @@
 </div>
 
 <!-- Popup xác nhận -->
+<!-- Xem ảnh hóa đơn xây nhà -->
+<div class="overlay" id="bPhotoView">
+  <div class="pv-wrap" id="pvWrap"><img id="pvImg" alt="Ảnh hóa đơn"></div>
+  <div class="pv-bar">
+    <button class="pv-zoom" id="btnPvZoom" type="button">🔍 Phóng to</button>
+    <button class="pv-close" id="btnPvClose" type="button">✕ Đóng</button>
+  </div>
+</div>
+
 <div class="overlay" id="confirmModal">
   <div class="modal" role="alertdialog">
     <h2 id="confirmTitle"></h2>
@@ -1065,7 +1095,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 36; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 37; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1183,13 +1213,15 @@
   function openDb() {
     if (!dbPromise) dbPromise = new Promise(function (resolve, reject) {
       if (!window.indexedDB) { reject(new Error('Không có IndexedDB')); return; }
-      // Bản 2 thêm kho "orders" (lịch sử đơn), bản 3 thêm kho "debts" (sổ nợ); khóa là thời điểm (ms)
-      var req = indexedDB.open('taphoa', 3);
+      // Bản 2 thêm kho "orders" (lịch sử đơn), bản 3 thêm kho "debts" (sổ nợ); khóa là thời điểm (ms).
+      // Bản 4 thêm kho "buildPhotos" (ảnh hóa đơn xây nhà, khóa = id ảnh). Chỉ thêm kho, kho cũ giữ nguyên.
+      var req = indexedDB.open('taphoa', 4);
       req.onupgradeneeded = function () {
         var db = req.result;
         if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos');
         if (!db.objectStoreNames.contains('orders')) db.createObjectStore('orders', { keyPath: 'ts' });
         if (!db.objectStoreNames.contains('debts')) db.createObjectStore('debts', { keyPath: 'ts' });
+        if (!db.objectStoreNames.contains('buildPhotos')) db.createObjectStore('buildPhotos');
       };
       req.onsuccess = function () {
         var db = req.result;
@@ -1843,13 +1875,14 @@
   }
   // orders: toàn bộ lịch sử đơn đang giữ. shop/orders/orderKeepDays là trường thêm sau,
   // file cũ không có thì khôi phục bỏ qua.
-  function buildBackupJson(orders, debts) {
+  function buildBackupJson(orders, debts, buildPhotos) {
     var data = { app: 'taphoa', version: 1, createdAt: new Date().toISOString(), products: products, photos: {} };
     if (getShop().name) data.shop = getShop();
     products.forEach(function (p) { if (photos[p.id]) data.photos[p.id] = photos[p.id]; });
     data.orders = orders || [];
     data.debts = debts || [];
     data.build = loadBuild();   // sổ chi phí xây nhà (trường thêm sau, file cũ không có thì bỏ qua)
+    data.buildPhotos = buildPhotos || {};   // ảnh hóa đơn xây nhà { id ảnh: data URL }
     data.orderKeepDays = keepDays();
     return JSON.stringify(data);
   }
@@ -1863,11 +1896,13 @@
     var token = {}, orderCount = 0, debtCount = 0;
     preparingToken = token;
     updateBackupUI();
-    Promise.all([getAllOrders(), getAllDebts()]).then(function (res) {
-      var orders = res[0] || [];
+    var phIds = allBuildPhotoIds(loadBuild());
+    Promise.all([getAllOrders(), getAllDebts(), getBuildPhotos(phIds)]).then(function (res) {
+      var orders = res[0] || [], bph = {};
       orderCount = orders.length;
       debtCount = (res[1] || []).length;
-      return encryptBackup(buildBackupJson(orders, res[1] || []), pw);
+      phIds.forEach(function (id) { if (bPhotoCache[id]) bph[id] = bPhotoCache[id]; });
+      return encryptBackup(buildBackupJson(orders, res[1] || [], bph), pw);
     }).then(function (json) {
       if (preparingToken !== token) return;
       var name = backupFileName();
@@ -1993,13 +2028,24 @@
     var fileOrders = Array.isArray(data.orders) ? data.orders.map(cleanOrder).filter(Boolean) : [];
     var fileDebts = Array.isArray(data.debts) ? data.debts.map(cleanDebt).filter(Boolean) : [];
     var fileBuild = Array.isArray(data.build) ? data.build.map(cleanBuildEntry).filter(Boolean) : [];
+    var haveBuild = {}, fileBuildPhotos = {};
+    loadBuild().forEach(function (e) { haveBuild[e.id] = true; });
+    // Chỉ lấy ảnh của các khoản chi sẽ được thêm (khoản đã có trên máy giữ nguyên cả ảnh)
+    fileBuild.forEach(function (e) {
+      if (haveBuild[e.id]) return;
+      (e.photos || []).forEach(function (id) {
+        var v = data.buildPhotos && data.buildPhotos[id];
+        if (typeof v === 'string' && v.indexOf('data:image/') === 0) fileBuildPhotos[id] = v;
+      });
+    });
     var fileKeep = KEEP_OPTIONS.some(function (o) { return o.days === data.orderKeepDays; }) ? data.orderKeepDays : 0;
     askConfirm('📥 Khôi phục dữ liệu?',
       'File sao lưu ngày ' + when + ':\n' + (fileShop.name ? '• Tiệm: ' + fileShop.name + '\n' : '') +
       '• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n' +
       (fileOrders.length ? '• ' + fileOrders.length + ' đơn đã bán\n' : '') +
       (fileDebts.length ? '• ' + fileDebts.length + ' dòng sổ nợ\n' : '') +
-      (fileBuild.length ? '• ' + fileBuild.length + ' khoản chi phí xây nhà\n' : '') + '\n' +
+      (fileBuild.length ? '• ' + fileBuild.length + ' khoản chi phí xây nhà' +
+        (Object.keys(fileBuildPhotos).length ? ' (' + Object.keys(fileBuildPhotos).length + ' ảnh hóa đơn)' : '') + '\n' : '') + '\n' +
       'Danh sách món hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.' +
       (fileOrders.length ? '\nĐơn đã bán được GỘP vào lịch sử, đơn đang có trên máy vẫn giữ nguyên.' : ''),
       'Khôi phục', function () {
@@ -2012,6 +2058,11 @@
         }
         // Sổ nợ cũng gộp (trùng thời điểm thì giữ một), không xóa dòng nợ đang có trên máy
         // Chi phí xây nhà cũng gộp theo id, khoản đã có trên máy giữ nguyên
+        if (Object.keys(fileBuildPhotos).length) {
+          dbTx('buildPhotos', 'readwrite', function (tx) {
+            Object.keys(fileBuildPhotos).forEach(function (id) { tx.objectStore('buildPhotos').put(fileBuildPhotos[id], id); });
+          }).catch(function () { toast('⚠️ Không lưu được ảnh hóa đơn, máy có thể đã đầy bộ nhớ'); });
+        }
         if (fileBuild.length) saveBuild(mergeBuildEntries(fileBuild).list);
         if (fileDebts.length) {
           dbTx('debts', 'readwrite', function (tx) { fileDebts.forEach(function (d) { tx.objectStore('debts').put(d); }); })
@@ -3517,11 +3568,12 @@
 
   // ---------- Chi phí xây nhà (sổ riêng, KHÔNG dính tới doanh thu / sổ nợ / đơn của tiệm) ----------
   // localStorage taphoa_build: { v: 1, entries: [{ id, date 'YYYY-MM-DD', name, group, total, note?,
-  //   items?: [{ name, qty, unit, price }], payments: [{ id, date, amount, note? }] }] }
+  //   items?: [{ name, qty, unit, price }], payments: [{ id, date, time?, amount, note? }], photos?: [id ảnh] }] }
+  // Ảnh hóa đơn nằm trong IndexedDB kho buildPhotos (khóa = id ảnh, giá trị = data URL JPEG).
   // Đã trả = tổng payments; còn lại = total − đã trả. Dữ liệu riêng của chủ nhà: không viết sẵn vào code (repo public).
   var KEY_BUILD = 'taphoa_build';
   var BUILD_GROUPS = { vat_tu: '🧱 Vật tư', nhan_cong: '👷 Nhân công', thue_ngoai: '🛠️ Thuê ngoài' };
-  var BUILD_DIGITS = 10, BUILD_MAX = 9999999999;
+  var BUILD_DIGITS = 10, BUILD_MAX = 9999999999, BUILD_PHOTO_MAX = 6;
   function validYmd(v) { return typeof v === 'string' && !!parseYmd(v); }
   function cleanBuildEntry(e) {
     if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id) return null;
@@ -3532,6 +3584,12 @@
       group: BUILD_GROUPS[e.group] ? e.group : 'vat_tu', total: Math.round(e.total), payments: []
     };
     if (typeof e.note === 'string' && e.note.trim()) out.note = e.note.trim().slice(0, 300);
+    if (Array.isArray(e.photos)) {
+      var ph = e.photos.filter(function (x, i) {
+        return typeof x === 'string' && /^g\d{1,16}$/.test(x) && e.photos.indexOf(x) === i;
+      }).slice(0, BUILD_PHOTO_MAX);
+      if (ph.length) out.photos = ph;
+    }
     if (Array.isArray(e.items)) {
       var items = e.items.filter(function (it) {
         return it && typeof it.name === 'string' && it.name.trim() && typeof it.qty === 'number' && it.qty > 0 &&
@@ -3581,6 +3639,80 @@
   function payWhen(p) { return fmtYmd(p.date) + (p.time ? ' lúc ' + p.time : ''); }
   function sortPays(list) { return list.slice().sort(function (a, b) { return (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')); }); }
 
+  // ---- Ảnh hóa đơn (kho buildPhotos) ----
+  var bPhotoCache = {};   // id ảnh -> data URL, nạp dần khi cần
+  function getBuildPhotos(ids) {
+    var need = ids.filter(function (id) { return !bPhotoCache[id]; });
+    if (!need.length) return Promise.resolve();
+    return dbTx('buildPhotos', 'readonly', function (tx) {
+      var st = tx.objectStore('buildPhotos');
+      need.forEach(function (id) {
+        st.get(id).onsuccess = function (ev) { if (typeof ev.target.result === 'string') bPhotoCache[id] = ev.target.result; };
+      });
+    }).catch(function () {});
+  }
+  function allBuildPhotoIds(list) {
+    var ids = [];
+    list.forEach(function (e) { (e.photos || []).forEach(function (id) { ids.push(id); }); });
+    return ids;
+  }
+  // Điền ảnh vào các ô đang hiện trên màn hình sau khi đọc xong
+  function fillBuildThumbs(root) {
+    var ids = [];
+    root.querySelectorAll('img[data-ph]').forEach(function (img) { ids.push(img.dataset.ph); });
+    getBuildPhotos(ids).then(function () {
+      root.querySelectorAll('img[data-ph]').forEach(function (img) {
+        var u = bPhotoCache[img.dataset.ph];
+        if (u && img.getAttribute('src') !== u) img.src = u;
+      });
+    });
+  }
+  // Ảnh hóa đơn cần đọc được chữ: cạnh dài tối đa 1600px, JPEG ~200–300KB
+  function resizeInvoice(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Ảnh lỗi')); };
+      img.src = url;
+    });
+  }
+  function thumbHtml(id, url, withX) {
+    return '<button class="bphoto" type="button" data-bact="photo" data-ph="' + escapeHtml(id) + '">' +
+      '<img alt="Ảnh hóa đơn" data-ph="' + escapeHtml(id) + '"' + (url ? ' src="' + url + '"' : '') + '>' +
+      (withX ? '<span class="x" data-del="' + escapeHtml(id) + '" role="button" aria-label="Bỏ ảnh này">✕</span>' : '') + '</button>';
+  }
+
+  // ---- Xem ảnh to ----
+  var pvEl = $('bPhotoView');
+  function showBuildPhoto(id, url) {
+    var u = url || bPhotoCache[id];
+    if (!u) return;
+    $('pvImg').src = u;
+    $('pvWrap').classList.remove('zoom');
+    $('btnPvZoom').textContent = '🔍 Phóng to';
+    openModal(pvEl);
+    $('pvWrap').scrollTop = 0;
+  }
+  function togglePvZoom() {
+    var z = $('pvWrap').classList.toggle('zoom');
+    $('btnPvZoom').textContent = z ? '🔍 Thu nhỏ' : '🔍 Phóng to';
+  }
+  $('btnPvZoom').addEventListener('click', togglePvZoom);
+  $('pvImg').addEventListener('click', togglePvZoom);
+  $('btnPvClose').addEventListener('click', function () { closeModal(pvEl); $('pvImg').removeAttribute('src'); });
+
   // ---- Màn hình danh sách ----
   var buildScreen = $('buildScreen'), buildListEl = $('buildList'), buildGroup = '', buildOpenId = '';
   function renderBuild() {
@@ -3601,6 +3733,7 @@
     html += '<button class="btn-show-paid" type="button" data-bact="import">📥 Nhập khoản chi từ file</button>' +
       '<div class="hist-note">Sổ riêng cho việc xây nhà: không cộng vào doanh thu, đơn hàng hay sổ nợ của tiệm. Có trong file sao lưu.</div>';
     buildListEl.innerHTML = html;
+    fillBuildThumbs(buildListEl);
   }
   function buildCard(e) {
     var paid = buildPaid(e), left = e.total - paid, open = buildOpenId === e.id;
@@ -3614,6 +3747,7 @@
           : '<div class="bdone">✅ Đã trả đủ</div>') +
         (e.payments.length ? '<div class="blast">🕒 Lần trả gần nhất: ' + payWhen(sortPays(e.payments).pop()) + '</div>' : '') +
       '</div>' +
+      (e.photos ? '<div class="bphotos">' + e.photos.map(function (id) { return thumbHtml(id, bPhotoCache[id], false); }).join('') + '</div>' : '') +
       '<div class="bbtns">' +
         (left > 0 ? '<button class="bb-pay" type="button" data-bact="pay" data-id="' + escapeHtml(e.id) + '">💵 Ứng thêm</button>' : '') +
         '<button class="bb-detail" type="button" data-bact="detail" data-id="' + escapeHtml(e.id) + '">' + (open ? '▲ Ẩn' : '📜 Chi tiết') + '</button>' +
@@ -3674,6 +3808,7 @@
     else if (act === 'detail') { buildOpenId = buildOpenId === id ? '' : id; renderBuild(); }
     else if (act === 'delpay') deleteBuildPayment(id, b.dataset.pid);
     else if (act === 'import') $('buildImportIn').click();
+    else if (act === 'photo') showBuildPhoto(b.dataset.ph);
   });
   function deleteBuildPayment(id, pid) {
     var list = loadBuild(), e = list.find(function (x) { return x.id === id; });
@@ -3688,6 +3823,13 @@
 
   // ---- Popup thêm / sửa khoản chi ----
   var buildModal = $('buildModal'), bEditingId = null, bGroup = 'vat_tu';
+  // Ảnh trong popup chỉ ghi vào máy khi bấm Lưu: bFormPhotos = [{ id, url? , isNew }]
+  var bFormPhotos = [], bSaving = false;
+  function renderFormPhotos() {
+    $('bPhotos').innerHTML = bFormPhotos.map(function (p) { return thumbHtml(p.id, p.url || bPhotoCache[p.id], true); }).join('');
+    $('btnAddBPhoto').style.display = bFormPhotos.length >= BUILD_PHOTO_MAX ? 'none' : '';
+    fillBuildThumbs($('bPhotos'));
+  }
   var bItemsEl = $('bItems');
   function moneyInput(el) {
     var d = capDigits(el.value, BUILD_DIGITS);
@@ -3756,6 +3898,8 @@
     bItemsEl.innerHTML = '';
     if (e && e.items) e.items.forEach(addBuildItemRow);
     $('bError').textContent = '';
+    bFormPhotos = (e && e.photos ? e.photos : []).map(function (id) { return { id: id, isNew: false }; });
+    renderFormPhotos();
     $('btnDeleteBuild').style.display = e ? '' : 'none';
     $('bPaidInfo').textContent = e ? 'Đã trả ' + fmt(buildPaid(e)) + ' qua ' + e.payments.length + ' lần (trả thêm bằng nút "Ứng thêm").' : '';
     updateBuildHint();
@@ -3775,7 +3919,29 @@
     else if (!e && paidFirst > total) err = 'Số đã trả lớn hơn tổng phải trả.';
     else if (e && total < buildPaid(e)) err = 'Tổng phải trả nhỏ hơn số đã trả (' + fmt(buildPaid(e)) + ').';
     $('bError').textContent = err;
-    if (err) return;
+    if (err || bSaving) return;
+    var keepIds = bFormPhotos.map(function (p) { return p.id; });
+    var newPh = bFormPhotos.filter(function (p) { return p.isNew; });
+    var dropIds = (e && e.photos || []).filter(function (id) { return keepIds.indexOf(id) < 0; });
+    // Ghi ảnh mới trước; không ghi được (máy đầy) thì giữ nguyên popup để không mất phần đã nhập
+    bSaving = true;
+    var write = newPh.length || dropIds.length ? dbTx('buildPhotos', 'readwrite', function (tx) {
+      var st = tx.objectStore('buildPhotos');
+      newPh.forEach(function (p) { st.put(p.url, p.id); });
+      dropIds.forEach(function (id) { st.delete(id); });
+    }) : Promise.resolve();
+    write.then(function () {
+      bSaving = false;
+      newPh.forEach(function (p) { bPhotoCache[p.id] = p.url; });
+      dropIds.forEach(function (id) { delete bPhotoCache[id]; });
+      finishBuildSave(list, e, { date: date, name: name, total: total, paidFirst: paidFirst, note: note, items: r.items, photos: keepIds });
+    }, function () {
+      bSaving = false;
+      $('bError').textContent = 'Không lưu được ảnh, máy có thể đã đầy bộ nhớ. Bỏ bớt ảnh rồi thử lại.';
+    });
+  }
+  function finishBuildSave(list, e, v) {
+    var date = v.date, name = v.name, total = v.total, paidFirst = v.paidFirst, note = v.note, r = { items: v.items };
     if (!e) {
       e = { id: 'b' + uniqueTs(), payments: [] };
       if (paidFirst) {
@@ -3788,6 +3954,7 @@
     e.date = date; e.name = name; e.group = bGroup; e.total = total;
     if (note) e.note = note; else delete e.note;
     if (r.items.length) e.items = r.items; else delete e.items;
+    if (v.photos.length) e.photos = v.photos; else delete e.photos;
     if (!saveBuild(list)) return;
     closeModal(buildModal);
     renderBuild();
@@ -3820,14 +3987,46 @@
     input.focus();
   });
   $('btnSaveBuild').addEventListener('click', saveBuildForm);
+  $('btnAddBPhoto').addEventListener('click', function () { $('bPhotoIn').click(); });
+  $('bPhotoIn').addEventListener('change', function (ev) {
+    var files = Array.prototype.slice.call(ev.target.files || [], 0, BUILD_PHOTO_MAX - bFormPhotos.length);
+    ev.target.value = '';
+    if (!files.length) return;
+    toast('⏳ Đang xử lý ảnh…');
+    files.reduce(function (chain, file) {
+      return chain.then(function () {
+        return resizeInvoice(file).then(function (url) {
+          if (bFormPhotos.length < BUILD_PHOTO_MAX) bFormPhotos.push({ id: 'g' + uniqueTs(), url: url, isNew: true });
+        }, function () { toast('⚠️ Có ảnh không mở được, chọn ảnh khác'); });
+      });
+    }, Promise.resolve()).then(function () {
+      renderFormPhotos();
+      $('toast').classList.remove('show');
+    });
+  });
+  $('bPhotos').addEventListener('click', function (ev) {
+    var del = ev.target.closest('[data-del]'), b = ev.target.closest('.bphoto');
+    if (!b) return;
+    var id = b.dataset.ph, p = bFormPhotos.find(function (x) { return x.id === id; });
+    if (!p) return;
+    if (!del) { showBuildPhoto(id, p.url); return; }
+    var drop = function () { bFormPhotos = bFormPhotos.filter(function (x) { return x.id !== id; }); renderFormPhotos(); };
+    if (p.isNew) drop();
+    else askConfirm('🗑️ Bỏ ảnh này?', 'Ảnh hóa đơn sẽ bị xóa khi bấm Lưu.', 'Bỏ ảnh', drop);
+  });
   $('btnCancelBuild').addEventListener('click', function () { closeModal(buildModal); });
   $('btnCloseBuildForm').addEventListener('click', function () { closeModal(buildModal); });
   $('btnDeleteBuild').addEventListener('click', function () {
     var list = loadBuild(), e = list.find(function (x) { return x.id === bEditingId; });
     if (!e) return;
     askConfirm('🗑️ Xóa khoản chi này?', '"' + e.name + '" (tổng ' + fmt(e.total) + ', đã trả ' + fmt(buildPaid(e)) +
-      ') sẽ bị xóa cùng toàn bộ các lần trả.', 'Xóa', function () {
+      ') sẽ bị xóa cùng toàn bộ các lần trả' + (e.photos ? ' và ' + e.photos.length + ' ảnh hóa đơn' : '') + '.', 'Xóa', function () {
       if (saveBuild(list.filter(function (x) { return x.id !== e.id; }))) {
+        if (e.photos) {
+          dbTx('buildPhotos', 'readwrite', function (tx) {
+            e.photos.forEach(function (id) { tx.objectStore('buildPhotos').delete(id); delete bPhotoCache[id]; });
+          }).catch(function () {});
+        }
         closeModal(buildModal);
         renderBuild();
         toast('Đã xóa: ' + e.name);

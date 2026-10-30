@@ -38,11 +38,12 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
   chọn trước khi chọn hàng).
 - `taphoa_build` (`{ v: 1, entries }`): sổ **Chi phí xây nhà**, mở từ ⚙️ Tiệm & cài đặt → 🏗️. Tách hẳn khỏi tiệm:
   KHÔNG cộng vào doanh thu, lịch sử đơn hay sổ nợ. Khoản chi `{ id, date: 'YYYY-MM-DD', name, group: 'vat_tu'|'nhan_cong'|'thue_ngoai',
-  total, items?: [{ name, qty, unit?, price }], note?, payments: [{ id, date, time?: 'HH:MM', amount, note? }] }`
+  total, items?: [{ name, qty, unit?, price }], note?, payments: [{ id, date, time?: 'HH:MM', amount, note? }], photos?: [id ảnh, tối đa 6] }`
   (đã trả = tổng `payments`, còn lại = `total` − đã trả; `time` chỉ ghi khi ngày trả là hôm nay).
   Số liệu thật của chủ tiệm KHÔNG được ghi vào code (repo public): nạp bằng nút "📥 Nhập khoản chi từ file"
   với file `{ app: 'taphoa-build', entries }` (`chi-phi-xay-nha*.json`, đã có trong `.gitignore`), gộp theo `id`, nhập lại không bị trùng.
-- IndexedDB `taphoa` phiên bản 3: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
+- IndexedDB `taphoa` phiên bản 4: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400; khôi phục thì xóa sạch rồi ghi lại),
+  kho `buildPhotos` (bản 4, ảnh hóa đơn xây nhà: khóa = id ảnh `g…`, giá trị = JPEG data URL cạnh dài ≤1600px),
   kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm),
   kho `debts` (keyPath `ts`, sổ nợ `{ ts, customer, type: 'no'|'tra', amount, orderTs?, total?, paid? }`; nợ của khách = tổng `no` − tổng `tra`,
   gộp theo `plain(tên)`). Sổ nợ KHÔNG bị xóa theo thời gian giữ lịch sử. Số dư âm = khách đang dư
@@ -59,7 +60,7 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 
 - **Định dạng file sao lưu**: bản 2 mã hóa AES-GCM 256, khóa sinh bằng PBKDF2-SHA256 600.000 vòng,
   các trường `app, version, encrypted, cipher, kdf, iterations, salt, iv, data`; bên trong là
-  `{ app, version: 1, createdAt, products, photos, shop?, orders?, orderKeepDays?, debts?, build? }`. Khôi phục thì THAY món/ảnh,
+  `{ app, version: 1, createdAt, products, photos, shop?, orders?, orderKeepDays?, debts?, build?, buildPhotos? }`. Khôi phục thì THAY món/ảnh,
   còn đơn đã bán, sổ nợ và chi phí xây nhà thì GỘP (không xóa dữ liệu đang có). Phải luôn khôi phục được
   cả file bản 2 lẫn file cũ bản 1 (chưa mã hóa). Đổi định dạng là các file sao lưu đã có sẽ không mở được.
 - **Tên khóa localStorage, tên/phiên bản/kho IndexedDB và cấu trúc dữ liệu ở trên**: đổi mà không có đoạn chuyển đổi là mất dữ liệu trên điện thoại.
