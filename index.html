@@ -588,6 +588,57 @@
     opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   #toast.show { opacity: 1; }
+  /* ---------- Chi phí xây nhà ---------- */
+  .screen-head.build-head { background: #9a3412; }
+  .build-filter { margin-top: 2px; }
+  .build-filter .chip { background: rgba(255,255,255,.15); color: #fff; border-color: rgba(255,255,255,.6); min-height: 44px; font-size: 17px; }
+  .build-filter .chip.on { background: #fff; color: #9a3412; border-color: #fff; }
+  .build-sum { background: #fff; border: 3px solid #9a3412; border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; }
+  .build-sum-title { font-size: 17px; font-weight: 800; color: var(--muted); margin-bottom: 6px; }
+  .build-sum .r { display: flex; justify-content: space-between; gap: 10px; font-size: 19px; padding: 3px 0; }
+  .build-sum .r b { font-size: 22px; white-space: nowrap; }
+  .build-sum .r.total { border-top: 2px dashed #d1d5db; margin-top: 4px; padding-top: 8px; font-weight: 800; }
+  .build-sum .r.total b { font-size: 26px; color: #9a3412; }
+  .c-green { color: var(--green); }
+  .c-red { color: var(--red); }
+  .bcard { background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 12px; margin: 10px 0; }
+  .bcard-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--muted); }
+  .btag { padding: 2px 10px; border-radius: 10px; font-size: 15px; font-weight: 800; white-space: nowrap; }
+  .btag.vat_tu { background: #fef3c7; color: #92400e; }
+  .btag.nhan_cong { background: #dbeafe; color: #1e40af; }
+  .btag.thue_ngoai { background: #ede9fe; color: #5b21b6; }
+  .bname { font-size: 20px; font-weight: 800; margin: 6px 0; line-height: 1.3; word-break: break-word; }
+  .bmoney .r { display: flex; justify-content: space-between; gap: 10px; font-size: 18px; padding: 1px 0; }
+  .bmoney .r b { white-space: nowrap; }
+  .bdone { color: var(--green); font-weight: 800; font-size: 18px; margin-top: 2px; }
+  .blast { font-size: 16px; color: var(--muted); margin-top: 4px; }
+  .bbtns { display: flex; gap: 6px; margin-top: 10px; }
+  .bbtns button { flex: 1; min-width: 0; min-height: 46px; padding: 0 4px; border-radius: 10px; font-size: 16px; font-weight: 800; white-space: nowrap; }
+  .bb-pay { background: var(--green); color: #fff; }
+  .bb-detail { background: #f3f4f6; color: var(--ink); border: 2px solid #9ca3af; }
+  .bb-edit { background: #eff6ff; color: var(--blue); border: 2px solid #93c5fd; }
+  .bdetail { margin-top: 10px; border-top: 2px dashed #d1d5db; padding-top: 6px; font-size: 16px; }
+  .bdetail h4 { font-size: 16px; margin: 8px 0 4px; }
+  .bitem, .bpayrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f3f4f6; }
+  .bitem span, .bpayrow span { flex: 1; min-width: 0; }
+  .bitem b, .bpayrow b { white-space: nowrap; }
+  .bpayrow .x {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #fff;
+    border: 2px solid #fca5a5; color: var(--red); font-weight: 900;
+  }
+  .unit-card.bitem-card { background: #fff7ed; border-color: #fdba74; }
+  .unit-card .bi-qty { flex: 0 0 64px; }
+  .unit-card .bi-unit { flex: 0 0 70px; }
+  .bi-sub { font-size: 16px; color: var(--muted); text-align: right; margin-top: 4px; }
+  .btn-open-build {
+    width: 100%; min-height: 56px; border-radius: 12px; margin: 4px 0 6px;
+    background: #fff7ed; color: #9a3412; border: 2px solid #fdba74; font-size: 20px; font-weight: 800;
+  }
+  .field input.b-input, .field textarea.b-input {
+    width: 100%; min-height: 54px; padding: 0 12px; font-size: 22px; border: 3px solid #6b7280; border-radius: 12px; background: #fff;
+  }
+  .field textarea.b-input { padding: 10px 12px; font-size: 19px; min-height: 80px; font-family: inherit; }
+
   /* Màn hình thấp (iPhone SE…): (đặt cuối để đè các định dạng ở trên) đầu trang cuộn theo giỏ hàng, nút gọn lại để có chỗ xem món */
   @media (max-height: 700px) {
     header { position: static; }
@@ -648,6 +699,24 @@
     </div>
   </div>
   <div class="screen-body" id="historyList"></div>
+</div>
+
+<!-- Màn hình chi phí xây nhà (sổ riêng, không dính tới sổ sách tiệm) -->
+<div class="screen" id="buildScreen">
+  <div class="screen-head build-head">
+    <div class="screen-title-row">
+      <h2>🏗️ Chi phí xây nhà</h2>
+      <button class="btn-close" id="btnCloseBuild">✕ Đóng</button>
+    </div>
+    <div class="chips build-filter" id="buildFilter">
+      <button class="chip on" type="button" data-g="">Tất cả</button>
+      <button class="chip" type="button" data-g="vat_tu">🧱 Vật tư</button>
+      <button class="chip" type="button" data-g="nhan_cong">👷 Nhân công</button>
+      <button class="chip" type="button" data-g="thue_ngoai">🛠️ Thuê ngoài</button>
+    </div>
+  </div>
+  <div class="screen-body" id="buildList"></div>
+  <input class="file-hidden" id="buildImportIn" type="file" accept=".json,application/json,text/plain" tabindex="-1">
 </div>
 
 <!-- Màn hình sửa giá -->
@@ -829,6 +898,8 @@
     <p class="opt-note">Bật nếu đơn nào cũng cần biết ai mua (ví dụ bán đồ dùng, bán sỉ): màn hình bán có nút chọn khách trước khi chọn hàng. Tạp hóa bán lẻ thì để tắt.</p>
     <label class="switch-row" for="optDebt"><input type="checkbox" id="optDebt"> 📒 Cho ghi nợ (mua chịu, trả sau)</label>
     <p class="opt-note">Bật thì lúc tính tiền có nút "Khách mua nợ": bấm vào mới hiện ô ghi tên khách để ghi nợ. Trong Đơn đã bán có Sổ nợ xem ai còn nợ bao nhiêu. Không cần bật Ghi tên khách ngay từ đầu.</p>
+    <button class="btn-open-build" id="btnOpenBuild" type="button">🏗️ Chi phí xây nhà</button>
+    <p class="opt-note">Sổ riêng cho việc xây nhà, không cộng vào doanh thu hay sổ nợ của tiệm.</p>
     <div class="modal-actions">
       <button class="btn-cancel" id="btnShopCancel">Hủy</button>
       <button class="btn-ok" id="btnShopSave">💾 Lưu</button>
@@ -907,6 +978,75 @@
   </div>
 </div>
 
+<!-- Popup thêm / sửa khoản chi xây nhà -->
+<div class="overlay" id="buildModal">
+  <div class="modal" role="dialog" aria-labelledby="buildTitle">
+    <div class="modal-head">
+      <button class="btn-x" id="btnCloseBuildForm" type="button" aria-label="Đóng">✕</button>
+      <h2 id="buildTitle">Thêm khoản chi</h2>
+    </div>
+    <div class="field"><label for="bDate">Ngày</label><input id="bDate" class="b-input" type="date"></div>
+    <div class="field"><label for="bName">Tên khoản</label><input id="bName" class="b-input" type="text" autocomplete="off" maxlength="120" placeholder="Ví dụ: Xi măng 1 bao"></div>
+    <div class="field">
+      <label>Nhóm</label>
+      <div class="chips cash-chips" id="bGroups">
+        <button class="chip" type="button" data-g="vat_tu">🧱 Vật tư</button>
+        <button class="chip" type="button" data-g="nhan_cong">👷 Nhân công</button>
+        <button class="chip" type="button" data-g="thue_ngoai">🛠️ Thuê ngoài</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="bTotal">Tổng phải trả (đồng)</label>
+      <div class="price-line"><input id="bTotal" type="text" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 12.000.000"><button class="btn-000" type="button">000</button></div>
+      <div class="hint" id="bPaidInfo"></div>
+    </div>
+    <div class="field" id="bPaidBox">
+      <label for="bPaidFirst">Đã trả / đã ứng lần đầu</label>
+      <div class="price-line"><input id="bPaidFirst" type="text" inputmode="numeric" autocomplete="off" placeholder="Để trống nếu chưa trả"><button class="btn-000" type="button">000</button></div>
+      <div class="chips" style="margin-top:8px"><button class="chip" type="button" id="btnBPaidFull">Trả đủ</button><button class="chip" type="button" id="btnBPaidNone">Chưa trả</button></div>
+      <div class="hint" id="bPaidHint"></div>
+    </div>
+    <div class="field">
+      <label>Chi tiết hóa đơn <span class="opt">(không bắt buộc)</span></label>
+      <div id="bItems"></div>
+      <button class="btn-show-paid" type="button" id="btnAddBItem">➕ Thêm dòng chi tiết</button>
+      <div class="hint" id="bItemsHint"></div>
+      <button class="chip" type="button" id="btnUseItemsTotal" style="display:none;margin-top:6px">Dùng cộng chi tiết làm tổng phải trả</button>
+    </div>
+    <div class="field"><label for="bNote">Ghi chú <span class="opt">(không bắt buộc)</span></label><textarea id="bNote" class="b-input" maxlength="300"></textarea></div>
+    <div class="error" id="bError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelBuild">Hủy</button>
+      <button class="btn-ok" id="btnSaveBuild">💾 Lưu</button>
+    </div>
+    <button class="btn-delete" id="btnDeleteBuild">🗑️ Xóa khoản chi này</button>
+  </div>
+</div>
+
+<!-- Popup ứng thêm (trả thêm một đợt) -->
+<div class="overlay" id="buildPayModal">
+  <div class="modal" role="dialog" aria-labelledby="buildPayTitle">
+    <div class="modal-head">
+      <button class="btn-x" id="btnCloseBuildPay" type="button" aria-label="Đóng">✕</button>
+      <h2 id="buildPayTitle">💵 Ứng thêm</h2>
+    </div>
+    <div class="pay-sum">
+      <div class="pay-row"><span>Khoản</span><b id="bpName" style="font-size:19px;text-align:right"></b></div>
+      <div class="pay-row"><span>Tổng phải trả</span><b id="bpTotal"></b></div>
+      <div class="pay-row"><span>Đã trả</span><b id="bpPaid"></b></div>
+      <div class="pay-row"><span>Còn lại</span><b id="bpLeftNow"></b></div>
+      <div class="pay-row big ok"><span>Còn lại sau đợt này</span><b id="bpAfter">—</b></div>
+    </div>
+    <span class="pay-label">Số tiền ứng đợt này:</span>
+    <div class="chips cash-chips" id="bpChips"></div>
+    <div class="field"><div class="price-line"><input id="bpAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="Hoặc gõ số tiền"><button class="btn-000" id="btnBp000" type="button">000</button></div>
+      <div class="error" id="bpError"></div></div>
+    <div class="field"><label for="bpDate">Ngày trả</label><input id="bpDate" class="b-input" type="date"></div>
+    <div class="field"><label for="bpNote">Ghi chú <span class="opt">(không bắt buộc)</span></label><input id="bpNote" class="b-input" type="text" maxlength="120" placeholder="Ví dụ: ứng đợt 2"></div>
+    <button class="btn-pay-done" id="btnSaveBuildPay">✅ Lưu lần trả</button>
+  </div>
+</div>
+
 <!-- Popup xác nhận -->
 <div class="overlay" id="confirmModal">
   <div class="modal" role="alertdialog">
@@ -925,7 +1065,7 @@
 (function () {
   'use strict';
 
-  var APP_VERSION = 35; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
+  var APP_VERSION = 36; // tăng cùng với CACHE trong sw.js mỗi lần sửa app
   var KEY_PRODUCTS = 'taphoa_products';
   var KEY_CART = 'taphoa_cart';
 
@@ -1407,18 +1547,31 @@
   // ---------- Nút Quay lại (◁) của Android ----------
   // Mỗi popup/màn hình mở ra thêm một bước vào lịch sử trình duyệt. Bấm Quay lại thì đóng cái trên cùng
   // thay vì thoát app; chỉ khi không còn gì mở mới thoát. Đếm số bước nên đóng/mở xen kẽ vẫn khớp.
-  var uiStack = [], ignorePop = 0;
+  // Đóng xong mở ngay cái khác (vd Tiệm & cài đặt → Chi phí xây nhà) thì dùng lại bước cũ (replaceState),
+  // phần lùi còn lại dồn vào một lần history.go() sau cùng, để không bị lệch giữa lùi và tiến.
+  var uiStack = [], ignorePop = 0, pendingBack = 0, backTimer = null;
   function uiPush(id) {
     if (!id || uiStack.indexOf(id) >= 0) return;
     uiStack.push(id);
-    try { history.pushState({ taphoaUi: uiStack.length }, ''); } catch (e) {}
+    try {
+      if (pendingBack > 0) { pendingBack--; history.replaceState({ taphoaUi: uiStack.length }, ''); }
+      else history.pushState({ taphoaUi: uiStack.length }, '');
+    } catch (e) {}
   }
   function uiPop(id) {
     var i = uiStack.indexOf(id);
     if (i < 0) return;
     uiStack.splice(i, 1);
+    pendingBack++;
+    if (!backTimer) backTimer = setTimeout(flushBack, 0);
+  }
+  function flushBack() {
+    backTimer = null;
+    var n = pendingBack;
+    pendingBack = 0;
+    if (!n) return;
     ignorePop++;   // lần popstate sắp tới là do mình lùi, không phải người dùng bấm
-    try { history.back(); } catch (e) { ignorePop--; }
+    try { history.go(-n); } catch (e) { ignorePop--; }
   }
   window.addEventListener('popstate', function () {
     if (ignorePop > 0) { ignorePop--; return; }
@@ -1426,6 +1579,7 @@
     if (!id) return;
     if (id === 'listScreen') closeListScreen(true);
     else if (id === 'historyScreen') closeHistory(true);
+    else if (id === 'buildScreen') closeBuild(true);
     else if ($(id)) closeModal($(id), true);
   });
 
@@ -1437,7 +1591,7 @@
     location.reload();
   }
   // Chạm vùng tối ngoài popup: chỉ đóng những popup không có ô đang nhập, để khỏi mất phần đang gõ
-  var STICKY_MODALS = ['addModal', 'qtyModal', 'pwModal', 'payModal', 'shopModal', 'debtPayModal', 'custModal'];
+  var STICKY_MODALS = ['addModal', 'qtyModal', 'pwModal', 'payModal', 'shopModal', 'debtPayModal', 'custModal', 'buildModal', 'buildPayModal'];
   document.querySelectorAll('.overlay').forEach(function (ov) {
     ov.addEventListener('click', function (e) {
       if (e.target === ov && STICKY_MODALS.indexOf(ov.id) < 0) closeModal(ov);
@@ -1695,6 +1849,7 @@
     products.forEach(function (p) { if (photos[p.id]) data.photos[p.id] = photos[p.id]; });
     data.orders = orders || [];
     data.debts = debts || [];
+    data.build = loadBuild();   // sổ chi phí xây nhà (trường thêm sau, file cũ không có thì bỏ qua)
     data.orderKeepDays = keepDays();
     return JSON.stringify(data);
   }
@@ -1720,7 +1875,7 @@
         file: new File([json], name, { type: 'application/json' }),
         txt: new File([json], name.replace(/\.json$/, '.txt'), { type: 'text/plain' }),
         orderCount: orderCount,
-        empty: !products.length && !orderCount && !debtCount
+        empty: !products.length && !orderCount && !debtCount && !loadBuild().length
       };
       preparingToken = null;
       updateBackupUI();
@@ -1837,12 +1992,14 @@
     var fileShop = cleanShop(data.shop);
     var fileOrders = Array.isArray(data.orders) ? data.orders.map(cleanOrder).filter(Boolean) : [];
     var fileDebts = Array.isArray(data.debts) ? data.debts.map(cleanDebt).filter(Boolean) : [];
+    var fileBuild = Array.isArray(data.build) ? data.build.map(cleanBuildEntry).filter(Boolean) : [];
     var fileKeep = KEEP_OPTIONS.some(function (o) { return o.days === data.orderKeepDays; }) ? data.orderKeepDays : 0;
     askConfirm('📥 Khôi phục dữ liệu?',
       'File sao lưu ngày ' + when + ':\n' + (fileShop.name ? '• Tiệm: ' + fileShop.name + '\n' : '') +
       '• ' + list.length + ' món\n• ' + Object.keys(newPhotos).length + ' ảnh\n' +
       (fileOrders.length ? '• ' + fileOrders.length + ' đơn đã bán\n' : '') +
-      (fileDebts.length ? '• ' + fileDebts.length + ' dòng sổ nợ\n' : '') + '\n' +
+      (fileDebts.length ? '• ' + fileDebts.length + ' dòng sổ nợ\n' : '') +
+      (fileBuild.length ? '• ' + fileBuild.length + ' khoản chi phí xây nhà\n' : '') + '\n' +
       'Danh sách món hiện tại (' + products.length + ' món) sẽ được THAY bằng dữ liệu trong file.' +
       (fileOrders.length ? '\nĐơn đã bán được GỘP vào lịch sử, đơn đang có trên máy vẫn giữ nguyên.' : ''),
       'Khôi phục', function () {
@@ -1854,6 +2011,8 @@
             .catch(function () { toast('⚠️ Không lưu được lịch sử đơn, máy có thể đã đầy bộ nhớ'); });
         }
         // Sổ nợ cũng gộp (trùng thời điểm thì giữ một), không xóa dòng nợ đang có trên máy
+        // Chi phí xây nhà cũng gộp theo id, khoản đã có trên máy giữ nguyên
+        if (fileBuild.length) saveBuild(mergeBuildEntries(fileBuild).list);
         if (fileDebts.length) {
           dbTx('debts', 'readwrite', function (tx) { fileDebts.forEach(function (d) { tx.objectStore('debts').put(d); }); })
             .catch(function () { toast('⚠️ Không lưu được sổ nợ'); });
@@ -3355,6 +3514,418 @@
     $('lastBar').style.display = 'none';
   }
   $('btnLastBill').addEventListener('click', function () { if (lastOrder) openBill(lastOrder); });
+
+  // ---------- Chi phí xây nhà (sổ riêng, KHÔNG dính tới doanh thu / sổ nợ / đơn của tiệm) ----------
+  // localStorage taphoa_build: { v: 1, entries: [{ id, date 'YYYY-MM-DD', name, group, total, note?,
+  //   items?: [{ name, qty, unit, price }], payments: [{ id, date, amount, note? }] }] }
+  // Đã trả = tổng payments; còn lại = total − đã trả. Dữ liệu riêng của chủ nhà: không viết sẵn vào code (repo public).
+  var KEY_BUILD = 'taphoa_build';
+  var BUILD_GROUPS = { vat_tu: '🧱 Vật tư', nhan_cong: '👷 Nhân công', thue_ngoai: '🛠️ Thuê ngoài' };
+  var BUILD_DIGITS = 10, BUILD_MAX = 9999999999;
+  function validYmd(v) { return typeof v === 'string' && !!parseYmd(v); }
+  function cleanBuildEntry(e) {
+    if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id) return null;
+    var name = typeof e.name === 'string' ? e.name.trim().replace(/\s+/g, ' ').slice(0, 120) : '';
+    if (!name || typeof e.total !== 'number' || !(e.total > 0) || e.total > BUILD_MAX) return null;
+    var out = {
+      id: e.id, date: validYmd(e.date) ? e.date : ymd(new Date()), name: name,
+      group: BUILD_GROUPS[e.group] ? e.group : 'vat_tu', total: Math.round(e.total), payments: []
+    };
+    if (typeof e.note === 'string' && e.note.trim()) out.note = e.note.trim().slice(0, 300);
+    if (Array.isArray(e.items)) {
+      var items = e.items.filter(function (it) {
+        return it && typeof it.name === 'string' && it.name.trim() && typeof it.qty === 'number' && it.qty > 0 &&
+          typeof it.price === 'number' && it.price >= 0;
+      }).map(function (it) {
+        return { name: it.name.trim().slice(0, 80), qty: it.qty, unit: typeof it.unit === 'string' ? it.unit.trim().slice(0, 20) : '', price: Math.round(it.price) };
+      });
+      if (items.length) out.items = items;
+    }
+    if (Array.isArray(e.payments)) {
+      out.payments = e.payments.filter(function (p) {
+        return p && typeof p.id === 'string' && typeof p.amount === 'number' && p.amount > 0 && p.amount <= BUILD_MAX;
+      }).map(function (p) {
+        var q = { id: p.id, date: validYmd(p.date) ? p.date : out.date, amount: Math.round(p.amount) };
+        if (typeof p.time === 'string' && /^\d\d:\d\d$/.test(p.time)) q.time = p.time;
+        if (typeof p.note === 'string' && p.note.trim()) q.note = p.note.trim().slice(0, 120);
+        return q;
+      });
+    }
+    return out;
+  }
+  function loadBuild() {
+    try {
+      var v = JSON.parse(localStorage.getItem(KEY_BUILD) || '{}');
+      return (v && Array.isArray(v.entries) ? v.entries : []).map(cleanBuildEntry).filter(Boolean);
+    } catch (e) { return []; }
+  }
+  function saveBuild(list) {
+    try { localStorage.setItem(KEY_BUILD, JSON.stringify({ v: 1, entries: list })); }
+    catch (e) { toast('⚠️ Không lưu được, máy có thể đã đầy bộ nhớ'); return false; }
+    // Xin trình duyệt giữ dữ liệu lâu dài
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+    return true;
+  }
+  function buildPaid(e) { return e.payments.reduce(function (s, p) { return s + p.amount; }, 0); }
+  function buildItemsTotal(items) {
+    return (items || []).reduce(function (s, it) { return s + Math.round(it.qty * it.price); }, 0);
+  }
+  function fmtQty(q) { return String(q).replace('.', ','); }
+  function parseQty(v) {
+    var n = Number(String(v).trim().replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) && n > 0 ? Math.round(n * 1000) / 1000 : 0;
+  }
+  function fmtYmd(v) { var d = parseYmd(v); return d ? fmtDate(d) : v; }
+  // Giờ:phút lúc ghi, chỉ khi ngày trả là hôm nay (chọn ngày cũ thì không biết giờ, để trống)
+  function nowTimeFor(date) { var n = new Date(); return date === ymd(n) ? two(n.getHours()) + ':' + two(n.getMinutes()) : ''; }
+  function payWhen(p) { return fmtYmd(p.date) + (p.time ? ' lúc ' + p.time : ''); }
+  function sortPays(list) { return list.slice().sort(function (a, b) { return (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')); }); }
+
+  // ---- Màn hình danh sách ----
+  var buildScreen = $('buildScreen'), buildListEl = $('buildList'), buildGroup = '', buildOpenId = '';
+  function renderBuild() {
+    var all = loadBuild();
+    var list = all.filter(function (e) { return !buildGroup || e.group === buildGroup; })
+      .sort(function (a, b) { return b.date.localeCompare(a.date) || (a.id < b.id ? 1 : -1); });
+    var total = 0, paid = 0;
+    list.forEach(function (e) { total += e.total; paid += buildPaid(e); });
+    document.querySelectorAll('#buildFilter .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.g === buildGroup); });
+    var html = '<div class="build-sum"><div class="build-sum-title">' +
+      (buildGroup ? BUILD_GROUPS[buildGroup] : 'Tất cả khoản chi') + ' · ' + list.length + ' khoản</div>' +
+      '<div class="r"><span>Đã chi</span><b class="c-green">' + fmt(paid) + '</b></div>' +
+      '<div class="r"><span>Còn phải trả</span><b class="c-red">' + fmt(total - paid) + '</b></div>' +
+      '<div class="r total"><span>Tổng chi phí</span><b>' + fmt(total) + '</b></div></div>' +
+      '<button class="btn-big save" type="button" data-bact="add">➕ Thêm khoản chi</button>';
+    if (!list.length) html += '<div class="empty">Chưa có khoản chi nào.</div>';
+    list.forEach(function (e) { html += buildCard(e); });
+    html += '<button class="btn-show-paid" type="button" data-bact="import">📥 Nhập khoản chi từ file</button>' +
+      '<div class="hist-note">Sổ riêng cho việc xây nhà: không cộng vào doanh thu, đơn hàng hay sổ nợ của tiệm. Có trong file sao lưu.</div>';
+    buildListEl.innerHTML = html;
+  }
+  function buildCard(e) {
+    var paid = buildPaid(e), left = e.total - paid, open = buildOpenId === e.id;
+    var html = '<div class="bcard">' +
+      '<div class="bcard-top"><span>📅 ' + fmtYmd(e.date) + '</span><span class="btag ' + e.group + '">' + BUILD_GROUPS[e.group] + '</span></div>' +
+      '<div class="bname">' + escapeHtml(e.name) + '</div>' +
+      '<div class="bmoney">' +
+        '<div class="r"><span>Tổng phải trả</span><b>' + fmt(e.total) + '</b></div>' +
+        '<div class="r"><span>Đã trả</span><b class="c-green">' + fmt(paid) + '</b></div>' +
+        (left > 0 ? '<div class="r"><span>Còn lại</span><b class="c-red">' + fmt(left) + '</b></div>'
+          : '<div class="bdone">✅ Đã trả đủ</div>') +
+        (e.payments.length ? '<div class="blast">🕒 Lần trả gần nhất: ' + payWhen(sortPays(e.payments).pop()) + '</div>' : '') +
+      '</div>' +
+      '<div class="bbtns">' +
+        (left > 0 ? '<button class="bb-pay" type="button" data-bact="pay" data-id="' + escapeHtml(e.id) + '">💵 Ứng thêm</button>' : '') +
+        '<button class="bb-detail" type="button" data-bact="detail" data-id="' + escapeHtml(e.id) + '">' + (open ? '▲ Ẩn' : '📜 Chi tiết') + '</button>' +
+        '<button class="bb-edit" type="button" data-bact="edit" data-id="' + escapeHtml(e.id) + '">✏️ Sửa</button>' +
+      '</div>';
+    if (open) {
+      html += '<div class="bdetail">';
+      if (e.items && e.items.length) {
+        html += '<h4>Chi tiết hóa đơn</h4>' + e.items.map(function (it) {
+          return '<div class="bitem"><span>' + escapeHtml(it.name) + '<br><small>' + fmtQty(it.qty) + ' ' + escapeHtml(it.unit) +
+            ' × ' + fmt(it.price) + '</small></span><b>' + fmt(Math.round(it.qty * it.price)) + '</b></div>';
+        }).join('') +
+        '<div class="bitem"><span><b>Cộng chi tiết</b></span><b>' + fmt(buildItemsTotal(e.items)) + '</b></div>';
+      }
+      html += '<h4>Các lần trả (' + e.payments.length + ')</h4>' +
+        (e.payments.length ? sortPays(e.payments).map(function (p, i) {
+          return '<div class="bpayrow"><span>Đợt ' + (i + 1) + ' · ' + payWhen(p) + (p.note ? '<br><small>' + escapeHtml(p.note) + '</small>' : '') +
+            '</span><b class="c-green">' + fmt(p.amount) + '</b>' +
+            '<button class="x" type="button" data-bact="delpay" data-id="' + escapeHtml(e.id) + '" data-pid="' + escapeHtml(p.id) + '" aria-label="Xóa lần trả này">✕</button></div>';
+        }).join('') : '<div class="hist-note" style="text-align:left">Chưa trả lần nào.</div>') +
+        (e.note ? '<h4>Ghi chú</h4><div>' + escapeHtml(e.note) + '</div>' : '') + '</div>';
+    }
+    return html + '</div>';
+  }
+  function openBuild() {
+    buildGroup = '';
+    buildOpenId = '';
+    renderBuild();
+    if (!buildScreen.classList.contains('open')) uiPush('buildScreen');
+    buildScreen.classList.add('open');
+    buildListEl.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeBuild(fromBack) {
+    if (fromBack !== true) uiPop('buildScreen');
+    buildScreen.classList.remove('open');
+    document.body.style.overflow = '';
+    reloadIfIdle();
+  }
+  $('btnCloseBuild').addEventListener('click', closeBuild);
+  $('btnOpenBuild').addEventListener('click', function () {
+    closeModal(shopModal);
+    openBuild();
+  });
+  $('buildFilter').addEventListener('click', function (e) {
+    var c = e.target.closest('.chip');
+    if (!c) return;
+    buildGroup = c.dataset.g;
+    renderBuild();
+  });
+  buildListEl.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-bact]');
+    if (!b) return;
+    var act = b.dataset.bact, id = b.dataset.id;
+    if (act === 'add') openBuildForm(null);
+    else if (act === 'edit') openBuildForm(id);
+    else if (act === 'pay') openBuildPay(id);
+    else if (act === 'detail') { buildOpenId = buildOpenId === id ? '' : id; renderBuild(); }
+    else if (act === 'delpay') deleteBuildPayment(id, b.dataset.pid);
+    else if (act === 'import') $('buildImportIn').click();
+  });
+  function deleteBuildPayment(id, pid) {
+    var list = loadBuild(), e = list.find(function (x) { return x.id === id; });
+    var p = e && e.payments.find(function (x) { return x.id === pid; });
+    if (!p) return;
+    askConfirm('🗑️ Xóa lần trả này?', e.name + ': trả ' + fmt(p.amount) + ' ngày ' + payWhen(p) +
+      '.\nXóa thì số "còn lại" tăng thêm ' + fmt(p.amount) + '.', 'Xóa', function () {
+      e.payments = e.payments.filter(function (x) { return x.id !== pid; });
+      if (saveBuild(list)) { renderBuild(); toast('Đã xóa lần trả ' + fmt(p.amount)); }
+    });
+  }
+
+  // ---- Popup thêm / sửa khoản chi ----
+  var buildModal = $('buildModal'), bEditingId = null, bGroup = 'vat_tu';
+  var bItemsEl = $('bItems');
+  function moneyInput(el) {
+    var d = capDigits(el.value, BUILD_DIGITS);
+    el.value = d ? money.format(Number(d)) : '';
+    return Number(d) || 0;
+  }
+  function addBuildItemRow(it) {
+    var row = document.createElement('div');
+    row.className = 'unit-card bitem-card';
+    row.innerHTML =
+      '<div class="tier-line"><input class="bi-name" type="text" autocomplete="off" placeholder="Tên (vd: gạch đặc)">' +
+      '<button class="tier-del" type="button" aria-label="Bỏ dòng này">✕</button></div>' +
+      '<div class="tier-line"><input class="bi-qty" type="text" inputmode="decimal" autocomplete="off" placeholder="SL">' +
+      '<input class="bi-unit" type="text" autocomplete="off" placeholder="ĐVT">×' +
+      '<input class="bi-price" type="text" inputmode="numeric" autocomplete="off" placeholder="Đơn giá"></div>' +
+      '<div class="bi-sub"></div>';
+    if (it) {
+      row.querySelector('.bi-name').value = it.name;
+      row.querySelector('.bi-qty').value = fmtQty(it.qty);
+      row.querySelector('.bi-unit').value = it.unit;
+      row.querySelector('.bi-price').value = money.format(it.price);
+    }
+    bItemsEl.appendChild(row);
+    return row;
+  }
+  function readBuildItems() {
+    var items = [], bad = false;
+    bItemsEl.querySelectorAll('.bitem-card').forEach(function (row) {
+      var name = row.querySelector('.bi-name').value.trim().replace(/\s+/g, ' ');
+      var qty = parseQty(row.querySelector('.bi-qty').value);
+      var price = Number(capDigits(row.querySelector('.bi-price').value, BUILD_DIGITS)) || 0;
+      var unit = row.querySelector('.bi-unit').value.trim();
+      var empty = !name && !row.querySelector('.bi-qty').value.trim() && !price;
+      row.querySelector('.bi-sub').textContent = qty && price ? '= ' + fmt(Math.round(qty * price)) : '';
+      if (empty) return;
+      if (!name || !qty) { bad = true; return; }
+      items.push({ name: name, qty: qty, unit: unit, price: price });
+    });
+    return { items: items, bad: bad };
+  }
+  function updateBuildHint() {
+    var total = Number(capDigits($('bTotal').value, BUILD_DIGITS)) || 0, r = readBuildItems();
+    var it = buildItemsTotal(r.items);
+    $('bItemsHint').innerHTML = r.items.length
+      ? 'Cộng chi tiết: <b>' + fmt(it) + '</b>' + (total && it !== total ? ' — khác tổng phải trả ' + fmt(total) : ' ✓')
+      : '';
+    $('btnUseItemsTotal').style.display = r.items.length && it !== total && it > 0 ? '' : 'none';
+    var paidFirst = Number(capDigits($('bPaidFirst').value, BUILD_DIGITS)) || 0;
+    $('bPaidHint').textContent = bEditingId === null && total ? 'Còn lại: ' + fmt(Math.max(0, total - paidFirst)) : '';
+  }
+  function setBuildGroup(g) {
+    bGroup = g;
+    document.querySelectorAll('#bGroups .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.g === g); });
+  }
+  function openBuildForm(id) {
+    var e = id ? loadBuild().find(function (x) { return x.id === id; }) : null;
+    bEditingId = e ? e.id : null;
+    $('buildTitle').textContent = e ? 'Sửa khoản chi' : 'Thêm khoản chi';
+    $('bDate').value = e ? e.date : ymd(new Date());
+    $('bName').value = e ? e.name : '';
+    setBuildGroup(e ? e.group : 'vat_tu');
+    $('bTotal').value = e ? money.format(e.total) : '';
+    $('bPaidFirst').value = '';
+    $('bPaidBox').style.display = e ? 'none' : '';   // sửa thì trả thêm bằng nút "Ứng thêm"
+    $('bNote').value = e && e.note ? e.note : '';
+    bItemsEl.innerHTML = '';
+    if (e && e.items) e.items.forEach(addBuildItemRow);
+    $('bError').textContent = '';
+    $('btnDeleteBuild').style.display = e ? '' : 'none';
+    $('bPaidInfo').textContent = e ? 'Đã trả ' + fmt(buildPaid(e)) + ' qua ' + e.payments.length + ' lần (trả thêm bằng nút "Ứng thêm").' : '';
+    updateBuildHint();
+    openModal(buildModal);
+    buildModal.querySelector('.modal').scrollTop = 0;
+  }
+  function saveBuildForm() {
+    var date = $('bDate').value, name = $('bName').value.trim().replace(/\s+/g, ' ');
+    var total = Number(capDigits($('bTotal').value, BUILD_DIGITS)) || 0;
+    var paidFirst = Number(capDigits($('bPaidFirst').value, BUILD_DIGITS)) || 0;
+    var note = $('bNote').value.trim(), r = readBuildItems(), err = '';
+    var list = loadBuild(), e = bEditingId ? list.find(function (x) { return x.id === bEditingId; }) : null;
+    if (!validYmd(date)) err = 'Chọn ngày.';
+    else if (!name) err = 'Nhập tên khoản chi.';
+    else if (!total) err = 'Nhập tổng phải trả.';
+    else if (r.bad) err = 'Dòng chi tiết cần có tên và số lượng (hoặc bấm ✕ để bỏ dòng).';
+    else if (!e && paidFirst > total) err = 'Số đã trả lớn hơn tổng phải trả.';
+    else if (e && total < buildPaid(e)) err = 'Tổng phải trả nhỏ hơn số đã trả (' + fmt(buildPaid(e)) + ').';
+    $('bError').textContent = err;
+    if (err) return;
+    if (!e) {
+      e = { id: 'b' + uniqueTs(), payments: [] };
+      if (paidFirst) {
+        var fp = { id: 'p' + uniqueTs(), date: date, amount: paidFirst, note: paidFirst === total ? 'Trả đủ' : 'Trả lần đầu' };
+        if (nowTimeFor(date)) fp.time = nowTimeFor(date);
+        e.payments.push(fp);
+      }
+      list.push(e);
+    }
+    e.date = date; e.name = name; e.group = bGroup; e.total = total;
+    if (note) e.note = note; else delete e.note;
+    if (r.items.length) e.items = r.items; else delete e.items;
+    if (!saveBuild(list)) return;
+    closeModal(buildModal);
+    renderBuild();
+    toast((bEditingId ? '✅ Đã sửa: ' : '✅ Đã thêm: ') + name);
+  }
+  $('bGroups').addEventListener('click', function (ev) { var c = ev.target.closest('.chip'); if (c) setBuildGroup(c.dataset.g); });
+  $('bTotal').addEventListener('input', function () { moneyInput(this); updateBuildHint(); });
+  $('bPaidFirst').addEventListener('input', function () { moneyInput(this); updateBuildHint(); });
+  $('btnBPaidFull').addEventListener('click', function () { $('bPaidFirst').value = $('bTotal').value; updateBuildHint(); });
+  $('btnBPaidNone').addEventListener('click', function () { $('bPaidFirst').value = ''; updateBuildHint(); });
+  $('btnAddBItem').addEventListener('click', function () { addBuildItemRow(null).querySelector('.bi-name').focus(); });
+  bItemsEl.addEventListener('input', function (ev) {
+    if (ev.target.classList.contains('bi-price')) moneyInput(ev.target);
+    updateBuildHint();
+  });
+  bItemsEl.addEventListener('click', function (ev) {
+    var d = ev.target.closest('.tier-del');
+    if (d) { d.closest('.bitem-card').remove(); updateBuildHint(); }
+  });
+  $('btnUseItemsTotal').addEventListener('click', function () {
+    var it = buildItemsTotal(readBuildItems().items);
+    $('bTotal').value = it ? money.format(it) : '';
+    updateBuildHint();
+  });
+  buildModal.addEventListener('click', function (ev) {
+    var b = ev.target.closest('.btn-000');
+    if (!b) return;
+    var input = b.parentNode.querySelector('input'), d = digitsOnly(input.value);
+    if (d && d.length <= BUILD_DIGITS - 3) { input.value = d + '000'; input.dispatchEvent(new Event('input', { bubbles: true })); }
+    input.focus();
+  });
+  $('btnSaveBuild').addEventListener('click', saveBuildForm);
+  $('btnCancelBuild').addEventListener('click', function () { closeModal(buildModal); });
+  $('btnCloseBuildForm').addEventListener('click', function () { closeModal(buildModal); });
+  $('btnDeleteBuild').addEventListener('click', function () {
+    var list = loadBuild(), e = list.find(function (x) { return x.id === bEditingId; });
+    if (!e) return;
+    askConfirm('🗑️ Xóa khoản chi này?', '"' + e.name + '" (tổng ' + fmt(e.total) + ', đã trả ' + fmt(buildPaid(e)) +
+      ') sẽ bị xóa cùng toàn bộ các lần trả.', 'Xóa', function () {
+      if (saveBuild(list.filter(function (x) { return x.id !== e.id; }))) {
+        closeModal(buildModal);
+        renderBuild();
+        toast('Đã xóa: ' + e.name);
+      }
+    });
+  });
+
+  // ---- Popup ứng thêm (trả thêm một đợt) ----
+  var buildPayModal = $('buildPayModal'), bpId = null;
+  function bpEntry() { return loadBuild().find(function (x) { return x.id === bpId; }); }
+  function openBuildPay(id) {
+    bpId = id;
+    var e = bpEntry();
+    if (!e) return;
+    var left = e.total - buildPaid(e);
+    $('bpName').textContent = e.name;
+    $('bpTotal').textContent = fmt(e.total);
+    $('bpPaid').textContent = fmt(buildPaid(e));
+    $('bpLeftNow').textContent = fmt(left);
+    var opts = [left];
+    [500000, 1000000, 2000000, 5000000, 10000000, 20000000].forEach(function (v) { if (v < left) opts.push(v); });
+    opts = opts.filter(function (v, i) { return opts.indexOf(v) === i; }).sort(function (a, b) { return a - b; }).slice(-6);
+    $('bpChips').innerHTML = opts.map(function (v) {
+      return '<button class="chip" type="button" data-v="' + v + '">' + (v === left ? 'Trả hết ' : '') + money.format(v) + '</button>';
+    }).join('');
+    $('bpAmount').value = '';
+    $('bpDate').value = ymd(new Date());
+    $('bpNote').value = '';
+    $('bpError').textContent = '';
+    updateBuildPay();
+    openModal(buildPayModal);
+  }
+  function updateBuildPay() {
+    var e = bpEntry();
+    if (!e) return;
+    var amt = moneyInput($('bpAmount')), left = e.total - buildPaid(e);
+    $('bpAfter').textContent = amt ? fmt(Math.max(0, left - amt)) : '—';
+    $('bpError').textContent = amt > left ? 'Vượt số còn phải trả (' + fmt(left) + ').' : '';
+    $('btnSaveBuildPay').disabled = !amt || amt > left;
+    document.querySelectorAll('#bpChips .chip').forEach(function (c) { c.classList.toggle('on', Number(c.dataset.v) === amt); });
+  }
+  $('bpChips').addEventListener('click', function (ev) {
+    var c = ev.target.closest('.chip');
+    if (!c) return;
+    $('bpAmount').value = c.dataset.v;
+    updateBuildPay();
+  });
+  $('bpAmount').addEventListener('input', updateBuildPay);
+  $('btnBp000').addEventListener('click', function () {
+    var d = digitsOnly($('bpAmount').value);
+    if (d && d.length <= BUILD_DIGITS - 3) { $('bpAmount').value = d + '000'; updateBuildPay(); }
+    $('bpAmount').focus();
+  });
+  $('btnSaveBuildPay').addEventListener('click', function () {
+    var list = loadBuild(), e = list.find(function (x) { return x.id === bpId; });
+    if (!e || $('btnSaveBuildPay').disabled) return;
+    var amt = Number(capDigits($('bpAmount').value, BUILD_DIGITS)) || 0, left = e.total - buildPaid(e);
+    var date = validYmd($('bpDate').value) ? $('bpDate').value : ymd(new Date());
+    if (!amt || amt > left) return;
+    var p = { id: 'p' + uniqueTs(), date: date, amount: amt };
+    if (nowTimeFor(date)) p.time = nowTimeFor(date);
+    if ($('bpNote').value.trim()) p.note = $('bpNote').value.trim();
+    e.payments.push(p);
+    if (!saveBuild(list)) return;
+    closeModal(buildPayModal);
+    renderBuild();
+    toast('✅ Ứng ' + fmt(amt) + ' cho ' + e.name + (left - amt > 0 ? '. Còn lại ' + fmt(left - amt) : '. Đã trả đủ'));
+  });
+  $('btnCloseBuildPay').addEventListener('click', function () { closeModal(buildPayModal); });
+
+  // ---- Nhập khoản chi từ file (gộp theo id, khoản đã có giữ nguyên) ----
+  function mergeBuildEntries(incoming) {
+    var list = loadBuild(), have = {};
+    list.forEach(function (e) { have[e.id] = true; });
+    var added = incoming.filter(function (e) { return !have[e.id]; });
+    return { list: list.concat(added), added: added.length };
+  }
+  $('buildImportIn').addEventListener('change', function (ev) {
+    var file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(reader.result); } catch (e) { data = null; }
+      var entries = data && data.app === 'taphoa-build' && Array.isArray(data.entries)
+        ? data.entries.map(cleanBuildEntry).filter(Boolean) : null;
+      if (!entries || !entries.length) { toast('⚠️ File này không phải file khoản chi xây nhà'); return; }
+      var m = mergeBuildEntries(entries);
+      if (!m.added) { toast('Các khoản trong file đã có sẵn, không thêm gì'); return; }
+      askConfirm('📥 Nhập khoản chi?', 'File có ' + entries.length + ' khoản, ' + m.added + ' khoản chưa có sẽ được thêm.\n' +
+        'Khoản đã có trên máy giữ nguyên.', 'Nhập', function () {
+        if (saveBuild(m.list)) { renderBuild(); toast('✅ Đã nhập ' + m.added + ' khoản chi'); }
+      });
+    };
+    reader.onerror = function () { toast('⚠️ Không đọc được file'); };
+    reader.readAsText(file);
+  });
 
   // ---------- Xóa & tạo đơn mới ----------
   // Hỏi rõ: bán xong thì qua popup tiền thối để lưu đủ tiền khách đưa/thối lại;

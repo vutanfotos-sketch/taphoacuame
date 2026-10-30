@@ -36,6 +36,12 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
   ghi nợ, tên khách chỉ gõ khi khách xin mua nợ; tiệm đồ dùng bật ghi tên khách ngay từ đầu),
   `taphoa_recent_customers` (tên khách gần đây, giữ cách viết đầu tiên), `taphoa_cart_customer` (khách của đơn đang tính,
   chọn trước khi chọn hàng).
+- `taphoa_build` (`{ v: 1, entries }`): sổ **Chi phí xây nhà**, mở từ ⚙️ Tiệm & cài đặt → 🏗️. Tách hẳn khỏi tiệm:
+  KHÔNG cộng vào doanh thu, lịch sử đơn hay sổ nợ. Khoản chi `{ id, date: 'YYYY-MM-DD', name, group: 'vat_tu'|'nhan_cong'|'thue_ngoai',
+  total, items?: [{ name, qty, unit?, price }], note?, payments: [{ id, date, time?: 'HH:MM', amount, note? }] }`
+  (đã trả = tổng `payments`, còn lại = `total` − đã trả; `time` chỉ ghi khi ngày trả là hôm nay).
+  Số liệu thật của chủ tiệm KHÔNG được ghi vào code (repo public): nạp bằng nút "📥 Nhập khoản chi từ file"
+  với file `{ app: 'taphoa-build', entries }` (`chi-phi-xay-nha*.json`, đã có trong `.gitignore`), gộp theo `id`, nhập lại không bị trùng.
 - IndexedDB `taphoa` phiên bản 3: kho `photos` (khóa = id món, giá trị = ảnh data URL 400×400),
   kho `orders` (keyPath `ts`, lịch sử đơn, giữ 3 tháng–2 năm tùy chọn, mặc định 1 năm),
   kho `debts` (keyPath `ts`, sổ nợ `{ ts, customer, type: 'no'|'tra', amount, orderTs?, total?, paid? }`; nợ của khách = tổng `no` − tổng `tra`,
@@ -53,12 +59,12 @@ App web tĩnh (PWA) tính tiền cho tiệm tạp hóa. Người dùng là ngư�
 
 - **Định dạng file sao lưu**: bản 2 mã hóa AES-GCM 256, khóa sinh bằng PBKDF2-SHA256 600.000 vòng,
   các trường `app, version, encrypted, cipher, kdf, iterations, salt, iv, data`; bên trong là
-  `{ app, version: 1, createdAt, products, photos, shop?, orders?, orderKeepDays?, debts? }`. Khôi phục thì THAY món/ảnh,
-  còn đơn đã bán và sổ nợ thì GỘP (không xóa dữ liệu đang có). Phải luôn khôi phục được
+  `{ app, version: 1, createdAt, products, photos, shop?, orders?, orderKeepDays?, debts?, build? }`. Khôi phục thì THAY món/ảnh,
+  còn đơn đã bán, sổ nợ và chi phí xây nhà thì GỘP (không xóa dữ liệu đang có). Phải luôn khôi phục được
   cả file bản 2 lẫn file cũ bản 1 (chưa mã hóa). Đổi định dạng là các file sao lưu đã có sẽ không mở được.
 - **Tên khóa localStorage, tên/phiên bản/kho IndexedDB và cấu trúc dữ liệu ở trên**: đổi mà không có đoạn chuyển đổi là mất dữ liệu trên điện thoại.
   Giữ nguyên đoạn chuyển đổi `packName/packSize` (bản 8) sang `units`.
-- **Không bao giờ đưa dữ liệu tiệm, file sao lưu (`taphoa-saoluu-*`, đã có trong `.gitignore`) hay mật khẩu lên repo**, vì repo public.
+- **Không bao giờ đưa dữ liệu tiệm, chi phí xây nhà, file sao lưu (`taphoa-saoluu-*`, `chi-phi-xay-nha*`, đã có trong `.gitignore`) hay mật khẩu lên repo**, vì repo public.
 - **Không đổi repo sang private**: tài khoản miễn phí thì GitHub Pages chỉ chạy với repo public, khóa repo là link app ngừng chạy.
   Đổi chỗ chạy app (domain khác) cũng làm mất dữ liệu trên điện thoại (dữ liệu gắn với địa chỉ trang), phải sao lưu/khôi phục từng máy.
   Chủ tiệm đã chọn giữ nguyên public.

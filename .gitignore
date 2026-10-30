@@ -4,3 +4,5 @@
 taphoa-saoluu-*
 # Chỉ mục CodeGraph trên máy, không đưa lên repo
 .codegraph/
+# Dữ liệu chi phí xây nhà riêng của chủ nhà: không đưa lên repo public
+chi-phi-xay-nha*.json
